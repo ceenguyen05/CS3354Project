@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard] # includes standard server dependencies
+sqlalchemy
+psycopg2-binary # for postgresql connection
+scikit-learn # for knn, onehotencoder, standardscaler
+numpy
+requests # for test_matching.py
+geopy # for geocoding locations
