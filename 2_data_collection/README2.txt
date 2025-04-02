@@ -1,66 +1,48 @@
 README2.txt
 
-Crowdsourced Disaster Relief Platform - Data Collection Scripts
+Crowdsourced Disaster Relief Platform – Data Collection Scripts
 ===============================================================
+Project
 
-Project: Crowdsourced Disaster Relief Platform
-Course: CS 3354 Spring 2025
-Group Number: 2
-Group Members: Casey Nguyen, Kevin Pulikkottil, Andy Jih, Sawyer
+    CS 3354 Spring 2025, Group 2
 
-Description:
-------------
-This folder provides scripts to populate your PostgreSQL database with initial test data, essential for demonstrating and testing your backend API, specifically tailored for integration with a Flutter frontend.
+    Members: Casey Nguyen, Kevin Pulikkottil, Andy Jih, Sawyer
 
-Included Files:
----------------
-- `populate_database.py`: Python script to automatically insert predefined volunteers and disaster aid requests into the PostgreSQL database.
+Description
 
-Prerequisites:
---------------
-- Python 3.9 or later
-- PostgreSQL database (`disaster_relief`) created
-- Python dependencies installed:
-  ```bash
-  pip install sqlalchemy psycopg2-binary
-  ```
+This folder provides scripts to populate your PostgreSQL database with initial test data. This data is essential for demonstrating and testing your backend API, particularly for verifying that volunteer and request entries exist for matching.
+Included Files
 
-Running the Data Collection Script:
------------------------------------
-1. Ensure PostgreSQL is running and the backend is set up.
+    populate_database.py: Inserts predefined volunteers and disaster aid requests into the disaster_relief PostgreSQL database.
 
-2. (Optional) Set `DATABASE_URL` environment variable or modify it directly in `populate_database.py`:
-   ```bash
-   export DATABASE_URL="postgresql://postgres:password@localhost/disaster_relief"
-   ```
+Prerequisites
 
-3. Execute the script from your project's root directory:
-   ```bash
-   python populate_database.py
-   ```
+    Python 3.9+
 
-4. Successful execution will output:
-   ```
-   Database populated successfully with volunteers and aid requests.
-   ```
+    PostgreSQL (database named disaster_relief)
 
-Flutter Integration Notes:
---------------------------
-This data population is structured to support clear frontend integration with Flutter. Use this data to verify that the Flutter app correctly retrieves and displays matched volunteers.
+    Dependencies: If you haven’t already, install them via:
 
-Sample Data for Testing:
-------------------------
-- Volunteers:
-  - Alice (Medical, Houston)
-  - Bob (Food Logistics, Austin)
-  - Charlie (Rescue, Dallas)
-  - Diana (Shelter Management, San Antonio)
-  - Ethan (Medical, Fort Worth)
+    pip install -r requirements.txt
 
-- Requests:
-  - 101: Medical in Houston
-  - 102: Food in Austin
-  - 103: Rescue in Dallas
-  - 104: Shelter in San Antonio
+    (This includes sqlalchemy, psycopg2-binary, etc.)
 
-These records are ideal for initial demonstrations and API endpoint verification through your Flutter frontend.
+Running the Data Collection Script
+
+    Ensure PostgreSQL is running, and DATABASE_URL is configured (either in the environment or in populate_database.py):
+
+export DATABASE_URL="postgresql://postgres:password@localhost/disaster_relief"
+
+Execute the script:
+
+python populate_database.py
+
+Expected output:
+
+    Database populated successfully with volunteers and aid requests.
+
+    This means your database now has sample entries with location strings and associated skills.
+
+Flutter Integration Notes
+
+This sample data is structured to support straightforward testing from a Flutter frontend. For instance, you might have requests like ID 101 referencing “Medical” in Houston, and volunteers who have matching skills or live in a similar location. Use these IDs and skill sets to confirm the Flutter app retrieves volunteer matches correctly.
