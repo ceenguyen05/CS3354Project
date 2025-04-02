@@ -70,20 +70,22 @@ app.add_middleware(
 geolocator = Nominatim(user_agent="disaster_relief_app_v1") # replace with your app's name/version
 
 def get_coordinates(location_str):
-    """geocodes a location string to (latitude, longitude)."""
+    # this function attempts to convert a location string into latitude and longitude
     try:
-        location = geolocator.geocode(location_str)
+        location = geolocator.geocode(location_str)  # this line sends a geocoding request using geolocator
         if location:
-            return location.latitude, location.longitude
+            return location.latitude, location.longitude  # returns the lat/lon if geocode succeeds
         else:
             print(f"Warning: Could not geocode location '{location_str}'. Returning (0, 0).")
-            return 0.0, 0.0 # return default or handle as error
+            return 0.0, 0.0  # returns default coordinates if none found
     except (GeocoderTimedOut, GeocoderServiceError) as e:
+        # this block handles geocoding timeouts or service errors
         print(f"Warning: Geocoding error for '{location_str}': {e}. Returning (0, 0).")
-        return 0.0, 0.0 # return default or handle as error
+        return 0.0, 0.0
     except Exception as e:
+        # this block catches any other unexpected errors
         print(f"Warning: Unexpected error during geocoding for '{location_str}': {e}. Returning (0, 0).")
-        return 0.0, 0.0 # return default or handle as error
+        return 0.0, 0.0
 
 
 # --- dependency injection for database session ---
