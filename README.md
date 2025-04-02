@@ -2,7 +2,16 @@
 
 ## Overview
 
-This project is a backend system for a Crowdsourced Disaster Relief Platform. It uses AI-powered matching to connect disaster relief requests with suitable volunteers based on skills and geographic proximity. The backend is built with FastAPI, PostgreSQL, SQLAlchemy, and scikit-learn, and is designed to integrate seamlessly with a Flutter frontend.
+This project is a **backend system** for a Crowdsourced Disaster Relief Platform. It uses **AI-powered matching** to connect disaster relief requests with suitable volunteers based on **skills** and **geographic proximity**. The backend is built with **FastAPI**, **PostgreSQL**, **SQLAlchemy**, and **scikit-learn**, designed to integrate seamlessly with a Flutter frontend.
+
+### Key Matching Features
+
+- **Geocoding**: Converts volunteer/request location strings to latitude/longitude via [`geopy`](https://pypi.org/project/geopy/).
+- **One-Hot Encoding**: Uses `sklearn.preprocessing.OneHotEncoder` for volunteer skills (based on a `KNOWN_SKILLS` list in `main.py`).
+- **Standard Scaling**: Applies `sklearn.preprocessing.StandardScaler` to coordinate + encoded skill vectors, improving KNN distance calculations.
+- **Robust Error Handling**:
+  - Skips volunteers whose location cannot be geocoded (logged as a warning).
+  - Gracefully handles cases where no volunteers (or none valid) exist, returning 404 or an appropriate message.
 
 ---
 
@@ -16,48 +25,87 @@ This project is a backend system for a Crowdsourced Disaster Relief Platform. It
 6. [Testing the Backend](#testing-the-backend)
 7. [Docker Deployment](#docker-deployment)
 8. [Troubleshooting](#troubleshooting)
+9. [Notes for Flutter Integration](#notes-for-flutter-integration)
+10. [Contributors](#contributors)
 
 ---
 
-## Tech Stack
+## 1. Tech Stack
 
-- **Backend Framework**: FastAPI
-- **Database**: PostgreSQL
-- **ORM**: SQLAlchemy
-- **AI Algorithm**: K-Nearest Neighbors (scikit-learn)
+- **Backend Framework**: [FastAPI](https://fastapi.tiangolo.com/)
+- **Database**: [PostgreSQL](https://www.postgresql.org/)
+- **ORM**: [SQLAlchemy](https://www.sqlalchemy.org/)
+- **AI Algorithm**: K-Nearest Neighbors (scikit-learn) with geocoded coordinates + one-hot-encoded skills
+- **Geocoding**: [geopy](https://pypi.org/project/geopy/)
 - **Containerization**: Docker & Docker Compose
 - **Frontend**: Flutter (integration-ready)
 
 ---
 
-## Prerequisites
+## 2. Prerequisites
 
 Before running the project, ensure you have the following installed:
 
-- Python 3.9+
-- PostgreSQL
-- Docker (optional, for containerized deployment)
-- Required Python packages:
-  ```bash
-  pip install fastapi uvicorn sqlalchemy psycopg2-binary scikit-learn numpy requests
-  ```
+1. **Python 3.9+**
+2. **PostgreSQL**
+3. **Docker** (optional, for containerized deployment)
+4. **Python packages** listed in `requirements.txt`. Key ones include:
+   - `fastapi`, `uvicorn`, `sqlalchemy`, `psycopg2-binary`, `scikit-learn`, `numpy`, `requests`, `geopy`, `pydantic`
+
+You can install them with:
+
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
-## Setup and Installation
+## 3. Setup and Installation
 
-### 1. Clone the Repository
-
-Clone the project to your local machine:
+### (A) Clone the Repository
 
 ```bash
 git clone <repository-url>
 cd <repository-folder>
 ```
 
-### 2. Set Up the Database
+### (B) Environment Variables / Database URL
 
-Create and configure the PostgreSQL database:
+If not already set, create or modify your database connection string. For example, in `main.py`:
+
+```python
+DATABASE_URL = "postgresql://postgres:password@localhost/disaster_relief"
+```
+
+### (C) Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+This ensures you have all libraries (FastAPI, geopy, etc.) for the AI matching features.
+
+---
+
+## 4. Running the Backend
+
+1. **Start PostgreSQL**Ensure your PostgreSQL server is running.
+2. **Run FastAPI**
+
+   ```bash
+   uvicorn main:app --reload
+   ```
+
+   By default, the API will be available at [http://localhost:8000](http://localhost:8000).
+3. **Check Interactive Docs**
+
+   - Go to [http://localhost:8000/docs](http://localhost:8000/docs) to see the automatically generated OpenAPI docs.
+
+---
+
+## 5. Populating the Database
+
+### (A) Create the Database
 
 ```sql
 CREATE DATABASE disaster_relief;
@@ -65,69 +113,33 @@ CREATE USER postgres WITH PASSWORD 'password';
 ALTER DATABASE disaster_relief OWNER TO postgres;
 ```
 
-Update the `DATABASE_URL` in the environment or directly in the code (default is already set):
+### (B) Run Auto-Creation or Migrations
 
-```python
-DATABASE_URL = "postgresql://postgres:password@localhost/disaster_relief"
-```
+If your code auto-creates tables on startup, just run the app. Otherwise, run any migration script if required.
 
----
+### (C) Insert Sample Data
 
-## Running the Backend
-
-### 1. Start the Backend
-
-Run the FastAPI backend using Uvicorn:
-
-```bash
-uvicorn main:app --reload
-```
-
-The API will be available at:
-
-```
-http://localhost:8000
-```
-
-### 2. Verify the API
-
-Visit the interactive API documentation at:
-
-```
-http://localhost:8000/docs
-```
-
----
-
-## Populating the Database
-
-### 1. Populate with Sample Data
-
-Run the `populate_database.py` script to insert predefined volunteers and requests:
+Optionally, run `populate_database.py` (or a similar script) to add volunteers and aid requests:
 
 ```bash
 python 2_data_collection/populate_database.py
 ```
 
-Expected output:
-
-```
-Database populated successfully with volunteers and aid requests.
-```
+This seeds the database with initial data. Volunteers’ locations will be geocoded when matching is requested.
 
 ---
 
-## Testing the Backend
+## 6. Testing the Backend
 
-### 1. Run Functional Tests
+### (A) Automated Tests
 
-Use the `test_matching.py` script to test the `/match/{request_id}` endpoint:
+If you have a script like `test_matching.py`:
 
 ```bash
 python 3_basic_function_testing/test_matching.py
 ```
 
-Expected output:
+Example:
 
 ```
 ✅ Request ID 101 - Success:
@@ -138,82 +150,92 @@ Status: 404, Error: {"error": "Request not found"}
 ------------------------------------------------------------
 ```
 
-### 2. Test API Manually
+### (B) Manual Testing
 
-You can also test the API manually using tools like `curl` or Postman. Example:
+Use `curl`, Postman, or a browser:
 
 ```bash
 curl http://localhost:8000/match/101
 ```
 
-Expected response:
+**Response** (sample):
 
 ```json
 {
   "matched_volunteers": [
-    {"id": 1, "name": "Alice", "skills": "Medical", "location": "Houston"},
-    {"id": 2, "name": "Bob", "skills": "Food Logistics", "location": "Austin"},
-    {"id": 3, "name": "Charlie", "skills": "Rescue", "location": "Dallas"}
+    {
+      "id": 1,
+      "name": "Alice",
+      "skills": "Medical",
+      "location": "Houston, TX"
+    },
+    ...
   ]
 }
 ```
 
+**Under the Hood**:
+
+1. Geocoding volunteer + request addresses to latitude/longitude.
+2. Encoding volunteer skills with one-hot encoding.
+3. Scaling numeric vectors.
+4. Running KNN to find best matches.
+
 ---
 
-## Docker Deployment
+## 7. Docker Deployment
 
-### 1. Build and Run with Docker Compose
-
-Use Docker Compose to build and run the backend and database:
+### (A) Build and Run with Docker Compose
 
 ```bash
 docker-compose up --build
 ```
 
-The API will be available at:
+This will:
 
-```
-http://localhost:8000
-```
+- Start a **PostgreSQL** container (port 5432).
+- Build and run the FastAPI container using `requirements.txt`.
 
-### 2. Verify Services
+### (B) Verify Services
 
-- **API**: Visit `http://localhost:8000/docs` to confirm the backend is running.
-- **Database**: Ensure PostgreSQL is running on port `5432`.
+- **API**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Database**: Check logs or connect via psql to ensure PostgreSQL is up.
 
 ---
 
-## Troubleshooting
+## 8. Troubleshooting
 
-### Common Issues
+1. **Database Connection Error**
 
-1. **Database Connection Error**:
+   - Verify PostgreSQL is running and your `DATABASE_URL` is correct.
+2. **Missing Dependencies**
 
-   - Ensure PostgreSQL is running and the `DATABASE_URL` is correctly configured.
-   - Verify the database credentials in `docker-compose.yml` or `main.py`.
-2. **Missing Dependencies**:
-
-   - Install missing Python packages:
+   - Reinstall from `requirements.txt`:
      ```bash
      pip install -r requirements.txt
      ```
-3. **Docker Issues**:
+3. **Docker Issues**
 
    - Ensure Docker is installed and running.
-   - Rebuild the containers if necessary:
+   - Try rebuilding:
      ```bash
      docker-compose down
      docker-compose up --build
      ```
+4. **Geocoding Failures**
+
+   - Check addresses are valid or specific enough for `geopy`.
+   - If `geopy` can’t resolve an address, that volunteer is skipped.
+5. **Zero Matches**
+
+   - Possibly no volunteers with overlapping skills or geocodable locations. The API may return an empty list or a `404` if the request doesn’t exist.
 
 ---
 
-## Notes for Flutter Integration
+## 9. Notes for Flutter Integration
 
-- The backend supports CORS, allowing cross-origin requests from the Flutter frontend.
-- Use the `/match/{request_id}` endpoint to fetch matched volunteers for a specific request.
-
-Example Flutter HTTP call:
+- CORS can be configured for cross-origin requests from Flutter.
+- Example Flutter HTTP call:
 
 ```dart
 import 'package:http/http.dart' as http;
@@ -226,7 +248,7 @@ Future<void> fetchMatchedVolunteers(int requestId) async {
 
   if (response.statusCode == 200) {
     final data = json.decode(response.body);
-    print(data);  // handle/display data in Flutter UI
+    // handle data in your Flutter UI
   } else {
     print('Request failed: ${response.statusCode}');
   }
@@ -235,7 +257,7 @@ Future<void> fetchMatchedVolunteers(int requestId) async {
 
 ---
 
-## Contributors
+## 10. Contributors
 
 - Casey Nguyen
 - Kevin Pulikkottil
