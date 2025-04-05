@@ -1,8 +1,9 @@
 fastapi
-uvicorn[standard] # includes standard server dependencies
-sqlalchemy
-psycopg2-binary # for postgresql connection
-scikit-learn # for knn, onehotencoder, standardscaler
+uvicorn[standard]
+# sqlalchemy # Removed
+# psycopg2-binary # Removed
+firebase-admin # Added for Firebase
+scikit-learn
 numpy
-requests # for test_matching.py
-geopy # for geocoding locations
+requests
+geopy

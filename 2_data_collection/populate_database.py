@@ -1,82 +1,121 @@
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-# import models and base from main.py
-# ensure main.py is in the same directory or python path
+import sys
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+# --- Firebase Admin SDK Setup ---
+# Duplicated from main.py for standalone execution, ensure consistency
 try:
-    from main import Volunteer, Request, Base, SessionLocal, engine
-except ImportError:
-    print("Error: Could not import from main.py. Make sure it's in the correct path.")
-    exit(1)
+    # Determine path relative to the script file if needed
+    script_dir = os.path.dirname(__file__)
+    default_key_path = os.path.join(script_dir, "serviceAccountKey.json")
+
+    cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", default_key_path)
+    if not os.path.exists(cred_path):
+         raise FileNotFoundError(f"Service account key file not found at: {cred_path}. Set GOOGLE_APPLICATION_CREDENTIALS or place key file correctly.")
+
+    # Avoid initializing app multiple times if run after main.py in some contexts
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+        print("Firebase Admin SDK initialized successfully for population script.")
+    else:
+        print("Firebase Admin SDK already initialized.")
+
+except FileNotFoundError as fnf_error:
+     print(f"Error: {fnf_error}")
+     sys.exit(1)
+except ValueError as val_error:
+     print(f"Error initializing Firebase Admin SDK: {val_error}")
+     sys.exit(1)
 except Exception as e:
-    print(f"An unexpected error occurred during import: {e}")
-    exit(1)
+    print(f"An unexpected error occurred during Firebase initialization: {e}")
+    sys.exit(1)
+
+# Get Firestore client
+try:
+    db = firestore.client()
+    print("Firestore client obtained successfully.")
+except Exception as e:
+    print(f"Error obtaining Firestore client: {e}")
+    sys.exit(1)
+
+
+# --- Firestore Collection References ---
+volunteers_ref = db.collection('volunteers')
+requests_ref = db.collection('requests')
+
+
+def clear_collection(collection_ref):
+    """Deletes all documents in a Firestore collection (use with caution!)."""
+    docs = collection_ref.stream()
+    deleted_count = 0
+    # Use batch delete for efficiency if available and needed, simple loop for clarity here
+    for doc in docs:
+        print(f"Deleting doc {doc.id} from {collection_ref.id}...")
+        doc.reference.delete()
+        deleted_count += 1
+    print(f"Deleted {deleted_count} documents from {collection_ref.id}.")
 
 
 def populate():
-    """Populates the database with sample volunteers and requests."""
-    db = SessionLocal()
-    print("Attempting to populate database...")
+    """Populates Firestore with sample volunteers and requests."""
+    print("Attempting to populate Firestore...")
 
     try:
-        # clear existing data to avoid duplicates during re-runs
+        # Clear existing data (optional, use carefully!)
         print("Clearing existing data...")
-        db.query(Volunteer).delete()
-        db.query(Request).delete()
-        db.commit() # commit deletions
+        clear_collection(volunteers_ref)
+        clear_collection(requests_ref)
         print("Existing data cleared.")
 
-        # define sample volunteers
-        # locations should be specific enough for geocoding (e.g., "houston, tx")
-        volunteers = [
-            Volunteer(name='Alice', skills='Medical', location='Houston, TX'),
-            Volunteer(name='Bob', skills='Food Logistics', location='Austin, TX'),
-            Volunteer(name='Charlie', skills='Rescue', location='Dallas, TX'),
-            Volunteer(name='Diana', skills='Shelter Management', location='San Antonio, TX'),
-            Volunteer(name='Ethan', skills='Medical', location='Fort Worth, TX'),
-            Volunteer(name='Fiona', skills='Transportation', location='Houston, TX'), # added more diverse skills/locations
-            Volunteer(name='George', skills='Communication', location='Dallas, TX'),
+        # Define sample volunteers as dictionaries
+        volunteers_data = [
+            {'name': 'Alice', 'skills': 'Medical', 'location': 'Houston, TX'},
+            {'name': 'Bob', 'skills': 'Food Logistics', 'location': 'Austin, TX'},
+            {'name': 'Charlie', 'skills': 'Rescue', 'location': 'Dallas, TX'},
+            {'name': 'Diana', 'skills': 'Shelter Management', 'location': 'San Antonio, TX'},
+            {'name': 'Ethan', 'skills': 'Medical', 'location': 'Fort Worth, TX'},
+            {'name': 'Fiona', 'skills': 'Transportation', 'location': 'Houston, TX'},
+            {'name': 'George', 'skills': 'Communication', 'location': 'Dallas, TX'},
         ]
 
-        # define sample requests
-        # ensure 'type' corresponds to skills in known_skills (defined in main.py)
-        requests = [
-            Request(id=101, type='Medical', location='Houston, TX'),
-            Request(id=102, type='Food Logistics', location='Austin, TX'), # changed type to match skill
-            Request(id=103, type='Rescue', location='Dallas, TX'),
-            Request(id=104, type='Shelter Management', location='San Antonio, TX'), # changed type to match skill
-            Request(id=105, type='Medical', location='Dallas, TX'), # added more requests
-            Request(id=106, type='Transportation', location='Houston, TX'),
-        ]
+        # Define sample requests as dictionaries
+        # Using specific string IDs matching previous examples for consistency in testing
+        requests_data = {
+            '101': {'type': 'Medical', 'location': 'Houston, TX'},
+            '102': {'type': 'Food Logistics', 'location': 'Austin, TX'},
+            '103': {'type': 'Rescue', 'location': 'Dallas, TX'},
+            '104': {'type': 'Shelter Management', 'location': 'San Antonio, TX'},
+            '105': {'type': 'Medical', 'location': 'Dallas, TX'},
+            '106': {'type': 'Transportation', 'location': 'Houston, TX'},
+        }
 
-        print(f"Adding {len(volunteers)} volunteers and {len(requests)} requests...")
-        db.add_all(volunteers)
-        db.add_all(requests)
+        # Use batch writes for efficiency
+        batch = db.batch()
 
-        # commit changes
-        db.commit()
-        print("Database populated successfully with volunteers and aid requests.")
+        print(f"Adding {len(volunteers_data)} volunteers...")
+        for v_data in volunteers_data:
+            # Let Firestore auto-generate volunteer IDs
+            doc_ref = volunteers_ref.document()
+            batch.set(doc_ref, v_data)
+
+        print(f"Adding {len(requests_data)} requests...")
+        for req_id, r_data in requests_data.items():
+            # Use specific IDs for requests
+            doc_ref = requests_ref.document(req_id)
+            batch.set(doc_ref, r_data)
+
+        # Commit the batch
+        batch.commit()
+        print("Firestore populated successfully using batch writes.")
 
     except Exception as e:
-        print(f"Error during database population: {e}")
-        db.rollback() # rollback changes on error
-    finally:
-        db.close() # ensure session is closed
-        print("Database session closed.")
+        print(f"Error during Firestore population: {e}")
+        # Batches don't have explicit rollback, but partial writes might occur before error.
 
 
 if __name__ == "__main__":
-    print("Running database population script...")
-    # ensure tables are created before populating
-    # this might be redundant if main.py already does it, but safe to include
-    try:
-        print("Ensuring database tables exist...")
-        Base.metadata.create_all(bind=engine)
-        print("Tables verified/created.")
-    except Exception as e:
-        print(f"Error creating/verifying database tables: {e}")
-        exit(1)
-
-    # populate the database
+    print("Running Firestore population script...")
     populate()
     print("Population script finished.")
