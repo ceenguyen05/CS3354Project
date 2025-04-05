@@ -1,249 +1,273 @@
 import os
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import sessionmaker, Session, declarative_base
 import numpy as np
+from fastapi import FastAPI, Depends, HTTPException # Keep Depends for potential future use, but not for DB session
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-from fastapi.responses import JSONResponse
 
-# --- database setup ---
+# --- Firebase Admin SDK Setup ---
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-# get database url from environment variable or use default
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost/disaster_relief")
+# Initialize Firebase Admin SDK
+# Expects the service account key file path via environment variable
+# Set by docker-compose.yml or manually for local execution
 try:
-    engine = create_engine(DATABASE_URL)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "serviceAccountKey.json") # Default for local
+    if not os.path.exists(cred_path):
+         raise FileNotFoundError(f"Service account key file not found at: {cred_path}. Set GOOGLE_APPLICATION_CREDENTIALS.")
+
+    cred = credentials.Certificate(cred_path)
+    firebase_admin.initialize_app(cred)
+    print("Firebase Admin SDK initialized successfully.")
+except FileNotFoundError as fnf_error:
+     print(f"Error: {fnf_error}")
+     # Exit or raise depending on desired behavior if key is missing
+     exit(1) # Exit if key is essential for startup
+except ValueError as val_error:
+     # Catch potential errors during initialization (e.g., invalid key file)
+     print(f"Error initializing Firebase Admin SDK: {val_error}")
+     exit(1)
 except Exception as e:
-    print(f"Error connecting to database: {e}")
-    # handle connection error appropriately, maybe exit or raise
-    raise
+    # Catch any other unexpected errors during initialization
+    print(f"An unexpected error occurred during Firebase initialization: {e}")
+    exit(1)
 
-# base class for sqlalchemy models
-Base = declarative_base()
 
-# --- database models ---
-
-class Volunteer(Base):
-    """sqlalchemy model for volunteers."""
-    __tablename__ = "volunteers"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    skills = Column(String) # assumes skills are stored as a single string, e.g., "medical, triage"
-    location = Column(String) # e.g., "houston, tx"
-
-class Request(Base):
-    """sqlalchemy model for aid requests."""
-    __tablename__ = "requests"
-    id = Column(Integer, primary_key=True, index=True)
-    type = Column(String, index=True) # corresponds to volunteer skills
-    location = Column(String) # e.g., "dallas, tx"
-
-# create database tables if they don't exist
-# in production, consider using alembic for migrations
+# Get Firestore client
 try:
-    Base.metadata.create_all(bind=engine)
+    db = firestore.client()
+    print("Firestore client obtained successfully.")
 except Exception as e:
-    print(f"Error creating database tables: {e}")
-    # handle table creation error
+    print(f"Error obtaining Firestore client: {e}")
+    exit(1)
 
-# --- fastapi application setup ---
+# --- FastAPI Application Setup ---
 
-app = FastAPI(title="Crowdsourced Disaster Relief API")
+app = FastAPI(title="Crowdsourced Disaster Relief API (Firebase)")
 
-# enable cors (cross-origin resource sharing)
-# security note: for production, restrict allow_origins to your specific frontend url
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # allows all origins for development
+    allow_origins=["*"], # Adjust for production
     allow_credentials=True,
-    allow_methods=["*"], # allows all methods (get, post, etc.)
-    allow_headers=["*"], # allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# --- geocoding setup ---
-# initialize geolocator (using openstreetmap nominatim)
-# requires internet connection
-geolocator = Nominatim(user_agent="disaster_relief_app_v1") # replace with your app's name/version
+# --- Geocoding Setup ---
+geolocator = Nominatim(user_agent="disaster_relief_app_firebase_v1")
 
 def get_coordinates(location_str):
-    # this function attempts to convert a location string into latitude and longitude
+    """Geocodes a location string to (latitude, longitude)."""
+    if not location_str: # Handle empty location string
+        print("Warning: Empty location string provided. Returning (0, 0).")
+        return 0.0, 0.0
     try:
-        location = geolocator.geocode(location_str)  # this line sends a geocoding request using geolocator
+        location = geolocator.geocode(location_str, timeout=10) # Added timeout
         if location:
-            return location.latitude, location.longitude  # returns the lat/lon if geocode succeeds
+            return location.latitude, location.longitude
         else:
             print(f"Warning: Could not geocode location '{location_str}'. Returning (0, 0).")
-            return 0.0, 0.0  # returns default coordinates if none found
+            return 0.0, 0.0
     except (GeocoderTimedOut, GeocoderServiceError) as e:
-        # this block handles geocoding timeouts or service errors
         print(f"Warning: Geocoding error for '{location_str}': {e}. Returning (0, 0).")
         return 0.0, 0.0
     except Exception as e:
-        # this block catches any other unexpected errors
         print(f"Warning: Unexpected error during geocoding for '{location_str}': {e}. Returning (0, 0).")
         return 0.0, 0.0
 
-
-# --- dependency injection for database session ---
-
-def get_db():
-    """dependency to get a database session per request."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-# --- ai matching configuration ---
-
-# define the known skill categories for one-hot encoding
-# important: this list should contain all possible skills your system recognizes.
-# it should be consistent with the skills stored in the database and request types.
-KNOWN_SKILLS = ['Medical', 'Food Logistics', 'Rescue', 'Shelter Management', 'Transportation', 'Communication', 'General Labor'] # example list - expand as needed
-
-# initialize the onehotencoder
-# handle_unknown='ignore' will create all-zero vectors for skills not in known_skills
+# --- AI Matching Configuration ---
+KNOWN_SKILLS = ['Medical', 'Food Logistics', 'Rescue', 'Shelter Management', 'Transportation', 'Communication', 'General Labor'] # Example list
 encoder = OneHotEncoder(categories=[KNOWN_SKILLS], sparse_output=False, handle_unknown='ignore')
-# fit the encoder (needs to be done once, ideally at startup, but fitting here is simpler for this example)
-# note: fitting requires a list of lists/2d array structure
 encoder.fit(np.array(KNOWN_SKILLS).reshape(-1, 1))
-
-# initialize the standardscaler for feature scaling
 scaler = StandardScaler()
 
-# --- api endpoints ---
+# --- Firestore Collection References ---
+volunteers_ref = db.collection('volunteers')
+requests_ref = db.collection('requests')
+
+# --- API Endpoints ---
 
 @app.get("/")
 def read_root():
-    """root endpoint providing basic api info."""
-    return {"message": "Welcome to the Crowdsourced Disaster Relief API"}
-
+    """Root endpoint."""
+    return {"message": "Welcome to the Crowdsourced Disaster Relief API (Firebase)"}
 
 @app.get("/match/{request_id}")
-def match_volunteers(request_id: int, db: Session = Depends(get_db)):
+def match_volunteers_firebase(request_id: str): # Request ID is likely a string in Firestore
     """
-    matches volunteers to a specific aid request using knn based on skills and location.
+    Matches volunteers to a specific aid request using KNN (data from Firestore).
     """
-    # 1. retrieve the request from the database
-    req = db.query(Request).filter(Request.id == request_id).first()
-    if not req:
-        # use httpexception for standard fastapi error handling
-        raise HTTPException(status_code=404, detail="Request not found")
+    # 1. Retrieve the request from Firestore
+    try:
+        request_doc = requests_ref.document(request_id).get()
+        if not request_doc.exists:
+            raise HTTPException(status_code=404, detail="Request not found")
+        req_data = request_doc.to_dict()
+        req_data['id'] = request_doc.id # Add document ID to the data dict
+    except Exception as e:
+        print(f"Error fetching request {request_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching request data: {e}")
 
-    # 2. retrieve all volunteers from the database
-    volunteers = db.query(Volunteer).all()
-    if not volunteers:
-        # if no volunteers exist at all
-        return {"matched_volunteers": []} # return empty list, not an error
+    # 2. Retrieve all volunteers from Firestore
+    # WARNING: Fetching all documents can be inefficient/costly at scale!
+    try:
+        all_volunteers_stream = volunteers_ref.stream()
+        all_volunteers_data = []
+        for doc in all_volunteers_stream:
+            v_data = doc.to_dict()
+            v_data['id'] = doc.id # Add document ID
+            all_volunteers_data.append(v_data)
 
-    # 3. feature engineering
+        if not all_volunteers_data:
+            return {"matched_volunteers": []}
+    except Exception as e:
+        print(f"Error fetching volunteers: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching volunteer data: {e}")
+
+    # 3. Feature Engineering (using data from Firestore dictionaries)
     volunteer_features = []
     request_feature_list = []
-    valid_volunteers = [] # keep track of volunteers for whom features could be generated
+    valid_volunteers = [] # Keep track of volunteers for whom features could be generated
 
-    # geocode request location
-    req_lat, req_lon = get_coordinates(req.location)
+    # Geocode request location
+    req_lat, req_lon = get_coordinates(req_data.get('location', '')) # Use .get for safety
     if req_lat == 0.0 and req_lon == 0.0:
-         print(f"Warning: Failed to geocode request location '{req.location}'. Matching may be inaccurate.")
-         # decide handling: raise error, or proceed with (0,0)? proceeding for now.
+         print(f"Warning: Failed to geocode request location '{req_data.get('location', '')}'. Matching may be inaccurate.")
 
-    # encode request type (skill)
-    # reshape needed for single sample
-    req_skill_encoded = encoder.transform(np.array([[req.type]]))
+    # Encode request type (skill)
+    req_type = req_data.get('type', '')
+    req_skill_encoded = encoder.transform(np.array([[req_type]]))
 
-    # combine request features: [lat, lon] + [encoded_skill_vector]
+    # Combine request features
     request_feature_list = [req_lat, req_lon] + list(req_skill_encoded[0])
 
-
-    # process volunteers
-    for v in volunteers:
-        # geocode volunteer location
-        v_lat, v_lon = get_coordinates(v.location)
+    # Process volunteers
+    for v_data in all_volunteers_data:
+        # Geocode volunteer location
+        v_location = v_data.get('location', '')
+        v_lat, v_lon = get_coordinates(v_location)
         if v_lat == 0.0 and v_lon == 0.0:
-            print(f"Warning: Skipping volunteer {v.id} ('{v.name}') due to geocoding failure for location '{v.location}'.")
-            continue # skip volunteer if geocoding fails
+            print(f"Warning: Skipping volunteer {v_data.get('id')} ('{v_data.get('name')}') due to geocoding failure for location '{v_location}'.")
+            continue
 
-        # encode volunteer skills (assuming single skill string for simplicity)
-        # if multiple skills (e.g., "medical, rescue"), split and handle appropriately
-        # for simplicity here, we assume v.skills matches one of the known_skills
-        v_skill_encoded = encoder.transform(np.array([[v.skills]]))
+        # Encode volunteer skills
+        v_skills = v_data.get('skills', '')
+        v_skill_encoded = encoder.transform(np.array([[v_skills]]))
 
-        # combine features: [lat, lon] + [encoded_skill_vector]
+        # Combine features
         features = [v_lat, v_lon] + list(v_skill_encoded[0])
         volunteer_features.append(features)
-        valid_volunteers.append(v) # add volunteer to the list used for matching
+        valid_volunteers.append(v_data) # Add original volunteer dict
 
-    # check if any valid volunteers remain after geocoding/encoding
+    # Check if any valid volunteers remain
     if not valid_volunteers:
         return {"matched_volunteers": []}
 
-    # convert features to numpy arrays
+    # Convert features to NumPy arrays
     X_volunteers = np.array(volunteer_features)
-    X_request = np.array([request_feature_list]) # reshape for single request
+    X_request = np.array([request_feature_list])
 
-    # 4. feature scaling
-    # fit the scaler on volunteer data and transform both volunteer and request data
+    # 4. Feature Scaling
     try:
         X_volunteers_scaled = scaler.fit_transform(X_volunteers)
-        X_request_scaled = scaler.transform(X_request) # use the same scaler fitted on volunteers
+        X_request_scaled = scaler.transform(X_request)
     except ValueError as e:
-         # handle potential errors during scaling (e.g., if only one volunteer remains)
-         print(f"Error during feature scaling: {e}. Returning raw volunteers.")
-         # fallback: maybe return closest by raw distance or just return empty/error
-         raise HTTPException(status_code=500, detail=f"Feature scaling error: {e}")
+         print(f"Error during feature scaling: {e}. Returning empty list.")
+         # Consider more robust error handling or fallback
+         return {"matched_volunteers": []}
 
-
-    # 5. k-nearest neighbors matching
-    # determine number of neighbors (up to 3, or fewer if fewer valid volunteers)
+    # 5. K-Nearest Neighbors Matching
     n_neighbors_to_find = min(3, len(valid_volunteers))
-
-    if n_neighbors_to_find == 0: # should be caught earlier, but double-check
+    if n_neighbors_to_find == 0:
          return {"matched_volunteers": []}
 
     knn = NearestNeighbors(n_neighbors=n_neighbors_to_find, metric='euclidean')
     knn.fit(X_volunteers_scaled)
-
-    # find the nearest neighbors for the scaled request vector
     distances, indices = knn.kneighbors(X_request_scaled)
 
-    # 6. prepare response
-    # get the matched volunteers based on knn results from the *valid_volunteers* list
+    # 6. Prepare Response
     matched_volunteers_info = []
     for i in indices[0]:
-        matched_v = valid_volunteers[i]
+        matched_v_data = valid_volunteers[i]
+        # Return only necessary fields, including the Firestore document ID
         matched_volunteers_info.append({
-            "id": matched_v.id,
-            "name": matched_v.name,
-            "skills": matched_v.skills,
-            "location": matched_v.location
-            # optionally include distance: distances[0][idx] where idx is the loop index
+            "id": matched_v_data.get('id'), # Firestore document ID
+            "name": matched_v_data.get('name'),
+            "skills": matched_v_data.get('skills'),
+            "location": matched_v_data.get('location')
         })
 
     return {"matched_volunteers": matched_volunteers_info}
 
-# --- optional: add other endpoints as needed (e.g., for crud operations) ---
 
-# example: endpoint to list volunteers (useful for debugging)
+# --- Optional: Endpoints for adding data (replace populate_database.py logic) ---
+
+# Example: Add a volunteer (Not fully replacing populate_database.py)
+@app.post("/volunteers/")
+async def add_volunteer(volunteer_data: dict): # Use dict for flexibility or Pydantic model
+    try:
+        # Add a new document with an auto-generated ID
+        update_time, doc_ref = volunteers_ref.add(volunteer_data)
+        print(f"Added volunteer with ID: {doc_ref.id} at {update_time}")
+        return {"id": doc_ref.id, "status": "success"}
+    except Exception as e:
+        print(f"Error adding volunteer: {e}")
+        raise HTTPException(status_code=500, detail=f"Error adding volunteer: {e}")
+
+# Example: Add a request (Not fully replacing populate_database.py)
+@app.post("/requests/")
+async def add_request(request_data: dict):
+    try:
+        # If you want to use a specific ID (like 101, 102), use .document(id).set()
+        # request_id = str(request_data.get('id')) # Assuming ID is in the dict
+        # if not request_id:
+        #     raise ValueError("Request data must include an 'id' field")
+        # doc_ref = requests_ref.document(request_id)
+        # update_time = doc_ref.set(request_data)
+
+        # Or add with auto-generated ID:
+        update_time, doc_ref = requests_ref.add(request_data)
+
+        print(f"Added request with ID: {doc_ref.id} at {update_time}")
+        return {"id": doc_ref.id, "status": "success"}
+    except Exception as e:
+        print(f"Error adding request: {e}")
+        raise HTTPException(status_code=500, detail=f"Error adding request: {e}")
+
+# Example: List volunteers (for debugging)
 @app.get("/volunteers/")
-def list_volunteers(db: Session = Depends(get_db)):
-    volunteers = db.query(Volunteer).all()
-    return [{"id": v.id, "name": v.name, "skills": v.skills, "location": v.location} for v in volunteers]
+def list_volunteers_firebase():
+    try:
+        volunteers = []
+        docs = volunteers_ref.stream()
+        for doc in docs:
+            v_data = doc.to_dict()
+            v_data['id'] = doc.id
+            volunteers.append(v_data)
+        return volunteers
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error listing volunteers: {e}")
 
-# example: endpoint to list requests (useful for debugging)
+# Example: List requests (for debugging)
 @app.get("/requests/")
-def list_requests(db: Session = Depends(get_db)):
-    requests_data = db.query(Request).all()
-    return [{"id": r.id, "type": r.type, "location": r.location} for r in requests_data]
+def list_requests_firebase():
+    try:
+        requests_list = []
+        docs = requests_ref.stream()
+        for doc in docs:
+            r_data = doc.to_dict()
+            r_data['id'] = doc.id
+            requests_list.append(r_data)
+        return requests_list
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error listing requests: {e}")
 
 
-# --- run the application (for local development) ---
-# this block is typically not included when deploying with docker,
-# as docker uses the cmd instruction. kept here for potential direct execution.
-# if __name__ == "__main__":
-#     import uvicorn
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
+# Note: populate_database.py needs to be rewritten separately using firebase-admin
+# Note: test_matching.py might need slight adjustments if request IDs change format (int vs string)
 

@@ -1,29 +1,25 @@
-# this file defines multiple services needed for the app
+# Defines the services needed for the app, now using Firebase (no local DB service)
 version: '3.8'
+
 services:
   api:
-    # this part builds and runs the fastapi service
+    # Builds and runs the FastAPI service
     build: .
     ports:
       - "8000:8000"
-    depends_on:
-      - db
-    environment:
-      DATABASE_URL: postgresql://postgres:password@db/disaster_relief
-
-  db:
-    # this part runs the postgres database service
-    image: postgres:13
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: disaster_relief
-    ports:
-      - "5432:5432"
+    # Mount the service account key file into the container
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro # Mount as read-only
+    environment:
+      # Tell the Firebase Admin SDK where to find the credentials
+      GOOGLE_APPLICATION_CREDENTIALS: /app/serviceAccountKey.json
+      # Add any other environment variables your app might need
+    # depends_on: # Removed dependency on local db service
+    #  - db
 
-volumes:
-  # this volume stores postgresql data
-  pgdata:
+# db: # Removed the PostgreSQL service definition
+#   image: postgres:13
+#   ...
+
+# volumes: # Removed the pgdata volume definition
+#  pgdata:
