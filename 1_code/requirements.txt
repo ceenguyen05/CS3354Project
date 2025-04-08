@@ -1,9 +1,8 @@
 fastapi
 uvicorn[standard]
-# sqlalchemy # Removed
-# psycopg2-binary # Removed
-firebase-admin # Added for Firebase
+firebase-admin
 scikit-learn
 numpy
 requests
 geopy
+joblib

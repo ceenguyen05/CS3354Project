@@ -1,37 +1,32 @@
-README2.txt - Setup Instructions
+Overview:
+This module provides a script to populate your Firebase Firestore database with sample data. This sample data is used for testing and to demonstrate the AI-powered matching functionality by providing volunteer profiles and disaster aid requests.
 
-To get the project running on your local machine, follow these steps:
+Prerequisites:
+  1. Firebase Credentials:
+     - Download your Firebase service account key JSON file.
+     - Rename it to "serviceAccountKey.json" and place it in the 1_code/ directory.
+     - (This file is excluded from Git via .gitignore.)
+  2. Environment Setup:
+     - Run "make setup" to create the virtual environment (located at 1_code/venv/) and install all dependencies from 1_code/requirements.txt.
 
-1. Clone the repository:
-   git clone https://github.com/Sawyer-Anderson1/CS_3354_Team_2_Project.git
-   cd CS_3354_Team_2_Project
-
-2. Run initial setup:
-   make setup
-   - Creates a virtual environment inside 1_code/venv/
-   - Installs all dependencies from requirements.txt
-
-3. Firebase Credentials:
-   - Download your Firebase service account key
-   - Rename it to serviceAccountKey.json
-   - Place it in the 1_code/ directory
-
-4. Populate the Firestore database:
+Populating the Database:
+To seed the Firestore database with sample data, run:
    make populate-db
-   - Clears existing documents and uploads sample requests and volunteers
 
-5. Run the application:
-   make run
-   - FastAPI will launch at http://localhost:8000
-   - Swagger UI available at http://localhost:8000/docs
+What the Script Does:
+  - Connects to Firebase using the service account key.
+  - Clears existing documents from the "volunteers" and "requests" collections.
+  - Inserts 7 sample volunteer records and 6 aid requests (with predefined IDs such as "101", "102", etc.) using batch writes for efficiency.
 
-6. Run tests:
-   make test
-   - Executes test_matching.py to verify match logic
-
-7. Docker (optional):
-   - Make sure Docker Desktop is running
-   - Build and start containers:
-     make docker-up
-   - Stop Docker services:
-     make docker-down
+Expected Console Output (sample):
+  Firebase Admin SDK initialized successfully for population script.
+  Firestore client obtained successfully.
+  Running Firestore population script...
+  Clearing existing data...
+  Deleted 7 documents from volunteers.
+  Deleted 6 documents from requests.
+  Existing data cleared.
+  Adding 7 volunteers...
+  Adding 6 requests...
+  Firestore populated successfully using batch writes.
+  Population script finished.
