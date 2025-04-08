@@ -10,3 +10,4 @@ dist/
 .gitignore
 .dist
 .DS_Store
+1_code/serviceAccountKey.json
