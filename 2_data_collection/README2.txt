@@ -1,48 +1,37 @@
-README2.txt
+README2.txt - Setup Instructions
 
-Crowdsourced Disaster Relief Platform – Data Collection Scripts
-===============================================================
-Project
+To get the project running on your local machine, follow these steps:
 
-    CS 3354 Spring 2025, Group 2
+1. Clone the repository:
+   git clone https://github.com/Sawyer-Anderson1/CS_3354_Team_2_Project.git
+   cd CS_3354_Team_2_Project
 
-    Members: Casey Nguyen, Kevin Pulikkottil, Andy Jih, Sawyer
+2. Run initial setup:
+   make setup
+   - Creates a virtual environment inside 1_code/venv/
+   - Installs all dependencies from requirements.txt
 
-Description
+3. Firebase Credentials:
+   - Download your Firebase service account key
+   - Rename it to serviceAccountKey.json
+   - Place it in the 1_code/ directory
 
-This folder provides scripts to populate your PostgreSQL database with initial test data. This data is essential for demonstrating and testing your backend API, particularly for verifying that volunteer and request entries exist for matching.
-Included Files
+4. Populate the Firestore database:
+   make populate-db
+   - Clears existing documents and uploads sample requests and volunteers
 
-    populate_database.py: Inserts predefined volunteers and disaster aid requests into the disaster_relief PostgreSQL database.
+5. Run the application:
+   make run
+   - FastAPI will launch at http://localhost:8000
+   - Swagger UI available at http://localhost:8000/docs
 
-Prerequisites
+6. Run tests:
+   make test
+   - Executes test_matching.py to verify match logic
 
-    Python 3.9+
-
-    PostgreSQL (database named disaster_relief)
-
-    Dependencies: If you haven’t already, install them via:
-
-    pip install -r requirements.txt
-
-    (This includes sqlalchemy, psycopg2-binary, etc.)
-
-Running the Data Collection Script
-
-    Ensure PostgreSQL is running, and DATABASE_URL is configured (either in the environment or in populate_database.py):
-
-export DATABASE_URL="postgresql://postgres:password@localhost/disaster_relief"
-
-Execute the script:
-
-python populate_database.py
-
-Expected output:
-
-    Database populated successfully with volunteers and aid requests.
-
-    This means your database now has sample entries with location strings and associated skills.
-
-Flutter Integration Notes
-
-This sample data is structured to support straightforward testing from a Flutter frontend. For instance, you might have requests like ID 101 referencing “Medical” in Houston, and volunteers who have matching skills or live in a similar location. Use these IDs and skill sets to confirm the Flutter app retrieves volunteer matches correctly.
+7. Docker (optional):
+   - Make sure Docker Desktop is running
+   - Build and start containers:
+     make docker-up
+   - Stop Docker services:
+     make docker-down

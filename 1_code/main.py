@@ -109,6 +109,8 @@ def match_volunteers_firebase(request_id: str): # Request ID is likely a string 
             raise HTTPException(status_code=404, detail="Request not found")
         req_data = request_doc.to_dict()
         req_data['id'] = request_doc.id # Add document ID to the data dict
+    except HTTPException:
+        raise  # re-raise 404 so FastAPI handles it properly
     except Exception as e:
         print(f"Error fetching request {request_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching request data: {e}")
@@ -270,4 +272,3 @@ def list_requests_firebase():
 
 # Note: populate_database.py needs to be rewritten separately using firebase-admin
 # Note: test_matching.py might need slight adjustments if request IDs change format (int vs string)
-

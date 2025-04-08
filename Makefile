@@ -30,19 +30,23 @@ setup:
 
 # Run unit tests (if they exist in 3_basic_function_testing/)
 test:
-	$(ACTIVATE) pytest 3_basic_function_testing/
+	$(ACTIVATE) pytest 3_basic_function_testing/test_matching.py
 
 # Populate the database with initial data
 populate-db:
-	GOOGLE_APPLICATION_CREDENTIALS=1_code/serviceAccountKey.json $(ACTIVATE) python 1_code/scripts/populate_database.py
+	GOOGLE_APPLICATION_CREDENTIALS=1_code/serviceAccountKey.json $(ACTIVATE) python 2_data_collection/populate_database.py
 
 # Run Docker containers
 docker-up:
-	docker-compose up --build
+	@docker info > /dev/null 2>&1 || (\
+		echo "❌ Docker daemon is not running. Please start Docker Desktop first."; \
+		exit 1; \
+	)
+	docker compose -f 1_code/docker-compose.yml up --build --remove-orphans
 
 # Tear down Docker containers
 docker-down:
-	docker-compose down
+	docker compose -f 1_code/docker-compose.yml down --remove-orphans
 
 # Clean up __pycache__ and other generated files
 clean:

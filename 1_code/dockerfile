@@ -9,8 +9,7 @@ COPY requirements.txt .
 
 # install dependencies from requirements.txt
 # --no-cache-dir reduces image size
-# --trusted-host pypi.python.org -i http://pypi.python.org/simple can sometimes help with network issues in certain environments
-RUN pip install --no-cache-dir --trusted-host pypi.python.org -i http://pypi.python.org/simple -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # copy the rest of the project files to the container
 COPY . /app
@@ -20,4 +19,5 @@ EXPOSE 8000
 
 # command to start the fastapi app when the container runs
 # uses 0.0.0.0 to be accessible externally
+# NOTE: Update "main:app" if your entrypoint is in a subdirectory or the file is named differently
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
