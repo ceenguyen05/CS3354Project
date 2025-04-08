@@ -1,278 +1,184 @@
-# Crowdsourced Disaster Relief Platform
+# CS 3354 Team 2 Project: Crowdsourced Disaster Relief Platform - AI Matching Backend
 
-## Overview
-
-This project is a **full-stack** Crowdsourced Disaster Relief Platform. It matches disaster relief requests with suitable volunteers based on **skills** and  **geographic proximity** , providing a centralized system where victims can request help, volunteers can register, and organizations can coordinate relief efforts.
-
-* **Frontend** : Built with Flutter (mobile or web), providing user-facing features such as request submission, volunteer registration, live maps, and more.
-* **Backend** : Implemented in Python using FastAPI, PostgreSQL, and SQLAlchemy. It applies **AI-powered matching** with scikit-learn’s K-Nearest Neighbors algorithm, enhanced by **geocoding** (via geopy) and **one-hot encoding** for volunteer skills.
-
-### Key AI Matching Enhancements
-
-1. **Geocoding** : Uses geopy to convert volunteer/request location strings into latitude/longitude.
-2. **One-Hot Encoding** : Transforms volunteer skill sets into numerical vectors based on a predefined `KNOWN_SKILLS` list.
-3. **Standard Scaling** : Applies sklearn’s StandardScaler to unify numeric features.
-4. **Robust Error Handling** : Volunteers with unresolvable addresses are gracefully skipped; 404s or empty lists if no valid matches exist.
+This project is a FastAPI-based volunteer/request matching system that interacts with a Firestore database. It includes a backend service, database population scripts, unit tests, and optional Docker support.
 
 ---
 
-## Table of Contents
+## Quick Start
 
-1. Tech Stack
-2. Prerequisites
-3. **Step-by-Step: Run & Test the Project**
-4. Running the Backend (Detailed)
-5. Populating the Database
-6. Testing the Backend (Detailed)
-7. Docker Deployment (Optional)
-8. Flutter Frontend Notes
-9. Troubleshooting
-10. Contributors
-
----
-
-## 1. Tech Stack
-
-* **Frontend** : Flutter (mobile or web)
-* **Backend** : FastAPI (Python)
-* **Database** : PostgreSQL
-* **ORM** : SQLAlchemy
-* **AI Matching** : scikit-learn (K-Nearest Neighbors + geocoding + one-hot encoding)
-* **Containerization** : Docker & Docker Compose (optional)
-
----
-
-## 2. Prerequisites
-
-1. **Python 3.9+**
-2. **PostgreSQL** installed locally or accessible remotely
-3. **Flutter** (if you plan to run or modify the frontend)
-4. **Docker** (optional, if you want to containerize the entire project)
-
-You should also have the Python libraries from `requirements.txt` installed:
-
-* fastapi
-* uvicorn
-* sqlalchemy
-* psycopg2-binary
-* scikit-learn
-* numpy
-* geopy
-* pydantic
-
-  (etc.)
-
----
-
-## 3. Step-by-Step: Run & Test the Project
-
-Use these quick steps if you’re new to the repo:
-
-1. **Clone the Repository**
-
-   ```bash
-   git clone <repository-url>
-   cd <repository-folder>
-   ```
-2. **Create a Python Virtual Environment** (optional but recommended):
-
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # macOS/Linux
-   # or on Windows:
-   venv\Scripts\activate
-   ```
-3. **Install Dependencies**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-   This ensures you have FastAPI, geopy, scikit-learn, etc.
-4. **Set Up PostgreSQL**
-
-   * Make sure PostgreSQL is running on your machine or in Docker.
-   * Create the DB:
-     ```sql
-     CREATE DATABASE disaster_relief;
-     CREATE USER postgres WITH PASSWORD 'password';
-     ALTER DATABASE disaster_relief OWNER TO postgres;
-     ```
-   * Update `DATABASE_URL` in your code or environment if needed.
-5. **Run the Backend**
-
-   ```bash
-   uvicorn main:app --reload
-   ```
-
-   * Visit [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) to confirm it’s running.
-6. **Populate Sample Data** (optional)
-
-   ```bash
-   python 2_data_collection/populate_database.py
-   ```
-
-   This script seeds your DB with volunteers/requests for testing.
-7. **Test the Matching Endpoint**
-
-   * Try a known request ID via curl/Postman:
-     ```bash
-     curl http://127.0.0.1:8000/match/101
-     ```
-   * If successful, you’ll see a JSON list of matched volunteers.
-8. **Run Automated Tests** (if available)
-
-   ```bash
-   python 3_basic_function_testing/test_matching.py
-   ```
-
-   * Ensures the KNN matching and endpoints behave correctly.
-9. **(Optional) Flutter Frontend**
-
-   * Go to your Flutter folder, run `flutter pub get`, then `flutter run` (or build for web).
-   * Update your Flutter code’s base URL to match `http://127.0.0.1:8000` (or wherever your backend is hosted).
-
-With these steps, you’ll have a running backend and can see how volunteer matching works via geocoding + one-hot encoding.
-
----
-
-## 4. Running the Backend (Detailed)
-
-1. **Ensure PostgreSQL is Running**
-   * On macOS, you might install and start it via Homebrew.
-   * On Windows, use the official installer or Docker.
-2. **Launch FastAPI**
-   ```bash
-   uvicorn main:app --reload
-   ```
-3. **Interactive API**
-   * Check [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
-   * You can test endpoints directly there.
-
----
-
-## 5. Populating the Database
-
-### (A) Create the Database
-
-If you haven’t already, open your psql shell (or a GUI) and run:
-
-```sql
-CREATE DATABASE disaster_relief;
-CREATE USER postgres WITH PASSWORD 'password';
-ALTER DATABASE disaster_relief OWNER TO postgres;
-```
-
-### (B) Auto-Creation / Migration
-
-If your code auto-creates tables on startup, you’re good. Otherwise, run any migration scripts if needed.
-
-### (C) Insert Sample Data
-
-From the project’s `2_data_collection` folder, run:
+### 1. Clone the Repository
 
 ```bash
-python populate_database.py
+git clone https://github.com/Sawyer-Anderson1/CS_3354_Team_2_Project.git
+cd CS_3354_Team_2_Project
 ```
 
-This seeds your DB with basic volunteers and requests that have various location strings and skills.
+### 2. Set Up Your Environment
+
+```bash
+make setup
+```
+
+This will:
+
+- Create a virtual environment at `1_code/venv/`
+- Install all dependencies from `requirements.txt`
 
 ---
 
-## 6. Testing the Backend (Detailed)
+## Firebase Setup
 
-### (A) Automated Script
+1. **Download** your Firebase service account key JSON file.
+2. **Place it** in the `1_code/` directory.
+3. **Ensure the filename is:** `serviceAccountKey.json`
 
-If you have `test_matching.py` or similar in `3_basic_function_testing`:
-
-```bash
-python 3_basic_function_testing/test_matching.py
-```
-
-Look for output indicating success (matched volunteers) or 404 errors if a request doesn’t exist.
-
-### (B) Manual Testing
-
-Using `curl` or Postman:
-
-```bash
-curl http://127.0.0.1:8000/match/101
-```
-
-If `101` is a valid request in your DB, you’ll get a JSON response with matched volunteers.
-
- **What Happens Internally** :
-
-1. The request’s location is geocoded to lat/long (if possible).
-2. Each volunteer’s location is also geocoded.
-3. Skills are encoded via a `KNOWN_SKILLS` list in `main.py`, using scikit-learn’s OneHotEncoder.
-4. Everything is scaled by StandardScaler so that distance computations consider both location and skill similarities.
-5. KNN returns the closest matches.
+> This file is excluded from Git using `.gitignore` and must be added manually.
 
 ---
 
-## 7. Docker Deployment (Optional)
-
-### (A) Build & Run with Docker Compose
+## Running the Backend Server (Locally)
 
 ```bash
-docker-compose up --build
+make run
 ```
 
-This typically spins up:
+This:
 
-* A PostgreSQL container on port 5432
-* The FastAPI container at port 8000
-
-### (B) Verify
-
-* **API** : Check [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
-* **Database** : Use psql or the logs to confirm the DB is running.
+- Activates the virtual environment
+- Sets the `GOOGLE_APPLICATION_CREDENTIALS` variable
+- Starts the FastAPI server at [http://localhost:8000](http://localhost:8000)
 
 ---
 
-## 8. Flutter Frontend Notes
+## Running Tests
 
-* The Flutter app can live in a separate folder (e.g., `frontend/`).
-* Run `flutter pub get`, then `flutter run` to start it.
-* In your Dart code, set the base URL to point to [http://127.0.0.1:8000](http://127.0.0.1:8000) (or your chosen host).
-* For iOS/Android emulators, you might need `10.0.2.2:8000` or `127.0.0.1:8000` depending on your environment.
+To test `/match/{request_id}`:
 
-Example Flutter snippet:
+```bash
+make test
+```
 
-```dart
-final response = await http.get(Uri.parse('http://127.0.0.1:8000/match/$requestId'));
-if (response.statusCode == 200) {
-  final data = json.decode(response.body);
-  // do something with "data"
+This:
+
+- Uses `pytest` to run `test_matching.py`
+- Validates matching logic (including error response for invalid ID)
+
+**Sample output:**
+
+```bash
+3_basic_function_testing/test_matching.py ..... [100%]
+```
+
+---
+
+## Populate the Firestore Database
+
+```bash
+make populate-db
+```
+
+This will:
+
+- Connect to Firebase using the service key
+- Clear existing `volunteers` and `requests` documents
+- Upload 7 volunteers and 6 requests
+
+---
+
+## Docker (Optional)
+
+> You **must** have Docker Desktop running before using these commands.
+
+### Start the server in Docker:
+
+```bash
+make docker-up
+```
+
+If Docker Desktop isn't running, you might see:
+
+```
+❌ Docker daemon is not running. Please start Docker Desktop first.
+make: *** [docker-up] Error 1
+```
+
+Make sure Docker Desktop is open, then retry.
+
+### Stop the container:
+
+```bash
+ctrl c
+make docker-down
+```
+
+---
+
+## Project Structure
+
+```
+CS_3354_Team_2_Project/
+├── 1_code/
+│   ├── main.py                  # FastAPI app
+│   ├── docker-compose.yml       # Docker configuration
+│   ├── serviceAccountKey.json   # Firebase credentials (excluded)
+│   └── venv/                    # Python virtual environment (excluded)
+├── 2_data_collection/
+│   └── populate_database.py     # Firestore data uploader
+├── 3_basic_function_testing/
+│   └── test_matching.py         # API test cases
+├── Makefile                     # CLI shortcuts
+├── requirements.txt             # Python deps
+├── .gitignore                   # Keeps secrets and junk out of Git
+└── README.md                    # You are here!
+```
+
+---
+
+## Cleaning Up
+
+To delete `__pycache__` folders and other auto-generated junk:
+
+```bash
+make clean
+```
+
+---
+
+## Sample API Output
+
+```http
+GET http://localhost:8000/match/101
+```
+
+```json
+{
+  "matched_volunteers": [
+    {
+      "id": "Ez7DJu4ZGrTljzHbiazy",
+      "name": "Alice",
+      "skills": "Medical",
+      "location": "Houston, TX"
+    },
+    {
+      "id": "AbozkwHssJX2zBEWlLXb",
+      "name": "Ethan",
+      "skills": "Medical",
+      "location": "Fort Worth, TX"
+    },
+    {
+      "id": "CNMZLygFonduGYU06vrg",
+      "name": "Fiona",
+      "skills": "Transportation",
+      "location": "Houston, TX"
+    }
+  ]
 }
 ```
 
 ---
 
-## 9. Troubleshooting
+## Notes
 
-1. **Database Connection Error**
-   * Confirm PostgreSQL is running, and your `DATABASE_URL` is correct.
-2. **Missing Dependencies**
-   * Run `pip install -r requirements.txt` again.
-3. **Docker Issues**
-   * Ensure Docker Desktop or daemon is running.
-   * Rebuild containers if needed:
-     ```bash
-     docker-compose down
-     docker-compose up --build
-     ```
-4. **Geocoding Failures**
-   * If `geopy` can’t parse the address, the volunteer or request location is skipped.
-5. **No Volunteers Matched**
-   * Possibly none share the needed skills or have valid lat/long data.
-
----
-
-## 10. Contributors
-
-* Casey Nguyen
-* Kevin Pulikkottil
-* Andy Jih
-* Sawyer
+- The `Makefile` streamlines most tasks.
+- Be sure `Docker Desktop` is running for Docker commands to succeed.
+- Your `serviceAccountKey.json` must **never be committed to Git**.
