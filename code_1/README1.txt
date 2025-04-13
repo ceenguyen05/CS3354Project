@@ -33,32 +33,54 @@ Key Features:
   - Emergency Alerts Screen 
   - Sign Up / Sign In Screen 
 
-HOW TO RUN (for Web):
------------------------
-- Our project we all did on VSCode. Make sure to have flutter installed as an extenstion 
-- Then download the flutter SDK on your laptop, preferably in your downloads folder 
-- After that follow the on screen instructions 
-- Open our zipfile and download the main code 
-- Open our code, navigate to one_code (flutter doesnt allow numbers)
-- in VSCode, on the bottom right, click for chrome to run as a webiste 
-- go to the one_code/lib/main.dart file and run our code on the play button
-- there, out website will be loaded in the debug stage 
-- all 5 buttons on the screen should be working
-- only exception is sign up and sign in as it works we just need to integrate the backend for data storage but professor said do it for 
-deliverable 2
-- Also follow the below instructions from the official flutter page. in the terminal flutter pub get is important so run that after 
-downloading and opening the code. Or just go to pubspec.yaml and save with command + S on mac to run pub get
+HOW TO RUN
+## Testing
 
-1. Make sure Flutter is installed and enabled for web:
-   flutter channel stable
-   flutter upgrade
-   flutter config --enable-web
+**Step 1: Create a Firebase Project**
 
-2. Install dependencies:
-   flutter pub get
+1. Go to the [Firebase Console](https://console.firebase.google.com/).
+2. Click **“Add project”** and follow the steps (you can skip Google Analytics if you prefer).
+3. Once created, your project dashboard will load. You’re now ready to generate a key.
 
-3. Run on Chrome:
-   flutter run -d chrome
+**Step 2: Generate a Service Account Private Key**
+
+1. In the Firebase Console, click the ⚙️ **gear icon** next to **Project Overview** and choose **Project settings**.
+2. Go to the **Service accounts** tab.
+3. Make sure **Python** is selected under  **Admin SDK configuration snippet** **.**
+4. Click the blue **“Generate new private key”** button.
+5. A **.json** key file will download to your system automatically.
+
+**Step 3: Rename and Move the Key File**
+
+1. Rename the downloaded **.json** file to:
+
+```
+serviceAccountKey.json
+```
+
+Move this file into `code_1/backend`
+
+**Step 4: Running the Code**
+
+Now, run:
+
+```bash
+make run-all # starts both the backend and frontend
+```
+
+If you get error 48, run `lsof -i :8001` and then kill the listed processes via `kill -9 PID1 PID2` and then rerun. You should run this after every program run.
+
+Uses `pytest` to validate:
+
+- Successful match queries
+- Data structure of responses
+- Handling of invalid IDs
+
+Run:
+
+```
+make test
+```
 
 DEPENDENCIES:
 -------------
