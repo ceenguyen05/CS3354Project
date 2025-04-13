@@ -19,8 +19,8 @@
 #   - Run "make populate-db" to load sample data into Firestore.
 #   - Run "make run" to launch your FastAPI backend.
 #   - Run "make test" to conduct unit tests.
-#   - Run "make run-all" to launch both the backend at http://127.0.0.1:8000/match/101 
-#     and the Flutter frontend at http://localhost:53825/.
+#   - Run "make run-all" to launch both the backend at http://127.0.0.1:8001/match/101 
+#     and the Flutter frontend at http://localhost:55242/.
 
 .PHONY: run setup test docker-up docker-down clean populate-db run-all
 
