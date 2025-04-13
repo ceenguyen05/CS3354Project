@@ -22,7 +22,7 @@ def validate_volunteer_dict(vol):
     ("/debug-match", "999", (404, 500))     # Debug endpoint non-existent: accept 404 or 500
 ])
 def test_endpoint(endpoint, request_id, expected_status):
-    url = f"http://localhost:8000{endpoint}/{request_id}"
+    url = f"http://localhost:8001{endpoint}/{request_id}"
     response = requests.get(url)
     
     # Check if expected_status is a tuple of acceptable responses
@@ -74,8 +74,8 @@ def test_consistency_between_debug_and_production():
     for a valid request.
     """
     request_id = "101"
-    prod_url = f"http://localhost:8000/match/{request_id}"
-    debug_url = f"http://localhost:8000/debug-match/{request_id}"
+    prod_url = f"http://localhost:8001/match/{request_id}"
+    debug_url = f"http://localhost:8001/debug-match/{request_id}"
     
     prod_response = requests.get(prod_url)
     debug_response = requests.get(debug_url)

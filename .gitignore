@@ -1,13 +1,51 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*.egg-info/
-.env
+
+# Virtual environments
+venv/
+env/
 .venv/
-build/
-dist/
-.vscode/
-.ipynb_checkpoints/
-.gitignore
-.dist
+
+# Sensitive keys
+serviceAccountKey.json
+.env
+
+# Python egg files
+*.egg-info/
+*.egg
+
+# Coverage and testing
+coverage/
+*.cover
+*.coverage
+*.coverages
+*.cov
+*.gcov
+.pytest_cache/
+.mypy_cache/
+
+# Logs and Docker
+*.log
+docker-compose.override.yml
+
+# macOS
 .DS_Store
-1_code/serviceAccountKey.json
+
+# IDE / Editor directories
+.vscode/
+.idea/
+
+# Node modules (if applicable)
+node_modules/
+
+# Flutter / Dart build artifacts and caches
+/code_1/build
+/code_1/macos/Pods
+/code_1/.dart_tool/chrome-device/*
+/code_1/.dart_tool/flutter_build
+/code_1/macos/Flutter
+/code_1/.dart_tool
+
+# Backup / old files
+*.old

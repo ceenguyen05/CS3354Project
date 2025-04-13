@@ -3,9 +3,7 @@ import sys
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# -----------------------------------------------------------------------------
 # Firebase Admin SDK Setup
-# -----------------------------------------------------------------------------
 # This section initializes the Firebase Admin SDK. It first checks for the 
 # GOOGLE_APPLICATION_CREDENTIALS environment variable. If not set, it looks
 # for the serviceAccountKey.json file in the same directory as this script.
@@ -46,15 +44,11 @@ except Exception as e:
     print(f"Error obtaining Firestore client: {e}")
     sys.exit(1)
 
-# -----------------------------------------------------------------------------
 # Firestore Collection References
-# -----------------------------------------------------------------------------
 volunteers_ref = db.collection('volunteers')
 requests_ref = db.collection('requests')
 
-# -----------------------------------------------------------------------------
 # Helper Functions
-# -----------------------------------------------------------------------------
 def clear_collection(collection_ref):
     """
     Deletes all documents in a Firestore collection. Use with caution!

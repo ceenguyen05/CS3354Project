@@ -8,34 +8,39 @@
 #   - Build and run Docker containers (make docker-up)
 #   - Tear down Docker containers (make docker-down)
 #   - Clean up __pycache__ folders (make clean)
+#   - Run both backend and Flutter frontend concurrently (make run-all)
 #
 # The AI matching functionality is integrated in main.py and matching_ai.py.
 # Ensure that your Firebase service account key (serviceAccountKey.json) is located
-# in the 1_code/ directory (this file is ignored by Git via .gitignore).
-
+# in the code_1/ directory (this file is ignored by Git via .gitignore).
+#
 # RUNNING INSTRUCTIONS:
-# make setup to prepare your environment,
-# make populate-db to load sample data into Firestore,
-# make run to launch your FastAPI backend,
-# make test to run your unit tests
+#   - Run "make setup" to prepare your environment.
+#   - Run "make populate-db" to load sample data into Firestore.
+#   - Run "make run" to launch your FastAPI backend.
+#   - Run "make test" to conduct unit tests.
+#   - Run "make run-all" to launch both the backend at http://127.0.0.1:8000/match/101 
+#     and the Flutter frontend at http://localhost:53825/.
 
-.PHONY: run setup test docker-up docker-down clean populate-db
+.PHONY: run setup test docker-up docker-down clean populate-db run-all
 
 # Path to the virtual environment directory
-VENV_DIR=1_code/venv
+VENV_DIR=code_1/backend/venv
 
 # Command to activate the virtual environment
 ACTIVATE=. $(VENV_DIR)/bin/activate;
 
-# FastAPI app entry point
-APP=1_code.main:app
+# FastAPI app entry point: APP=code_1/backend/main.py
 
 # Path to the requirements file
-REQS=1_code/requirements.txt
+REQS=code_1/backend/requirements.txt
+
+# Path to the Flutter executable (SET YOUR OWN PATH)
+FLUTTER_PATH?=/Users/kevinpulikkottil/flutter/bin
 
 # Default target: run the FastAPI server with the service account environment variable set.
 run:
-	GOOGLE_APPLICATION_CREDENTIALS=1_code/serviceAccountKey.json $(ACTIVATE) uvicorn $(APP) --reload
+	GOOGLE_APPLICATION_CREDENTIALS=code_1/backend/serviceAccountKey.json $(ACTIVATE) uvicorn code_1.backend.main:app --reload --port 8001
 
 # One-time setup: create the virtual environment & install dependencies
 setup:
@@ -49,20 +54,32 @@ test:
 
 # Populate Firestore with sample data
 populate-db:
-	GOOGLE_APPLICATION_CREDENTIALS=1_code/serviceAccountKey.json $(ACTIVATE) python 2_data_collection/populate_database.py
+	GOOGLE_APPLICATION_CREDENTIALS=code_1/backend/serviceAccountKey.json $(ACTIVATE) python 2_data_collection/populate_database.py
 
-# Build and run Docker containers with the Compose file in 1_code/
+# Build and run Docker containers with the Compose file in code_1/
 docker-up:
 	@docker info > /dev/null 2>&1 || (\
 		echo "❌ Docker daemon is not running. Please start Docker Desktop first."; \
 		exit 1; \
 	)
-	docker compose -f 1_code/docker-compose.yml up --build --remove-orphans
+	docker compose -f code_1/backend/docker-compose.yml up --build --remove-orphans
 
 # Tear down Docker containers
 docker-down:
-	docker compose -f 1_code/docker-compose.yml down --remove-orphans
+	docker compose -f code_1/backend/docker-compose.yml down --remove-orphans
 
 # Clean up Python __pycache__ directories
 clean:
 	find . -type d -name '__pycache__' -exec rm -r {} +
+
+# New target to run both backend and frontend
+run-all: setup populate-db
+	@echo "Starting backend server..."
+	# Run the backend in the background so that the terminal is free for Flutter
+	( $(MAKE) run & )
+	@echo "Waiting for backend to be ready..."
+	@while ! nc -z 127.0.0.1 8001; do sleep 1; done
+	@echo "Backend is ready."
+	@echo "Starting Flutter frontend..."
+	# Change directory to code_1 and run the Flutter app
+	cd code_1 && $(FLUTTER_PATH)/flutter run lib/main.dart

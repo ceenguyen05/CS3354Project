@@ -1,13 +1,16 @@
 Overview:
-This module provides a script to populate your Firebase Firestore database with sample data. This sample data is used for testing and to demonstrate the AI-powered matching functionality by providing volunteer profiles and disaster aid requests.
+This module provides a script to populate your Firebase Firestore database with sample data. 
+This sample data is used for testing and to demonstrate the AI-powered matching functionality by providing volunteer profiles and 
+disaster aid requests. This is are 2_data_collection
 
 Prerequisites:
   1. Firebase Credentials:
      - Download your Firebase service account key JSON file.
-     - Rename it to "serviceAccountKey.json" and place it in the 1_code/ directory.
+     - Rename it to "serviceAccountKey.json" and place it in the one_code/ directory.
      - (This file is excluded from Git via .gitignore.)
   2. Environment Setup:
-     - Run "make setup" to create the virtual environment (located at 1_code/venv/) and install all dependencies from 1_code/requirements.txt.
+     - Run "make setup" to create the virtual environment (located at one_code/venv/) and install all dependencies 
+     from one_code/requirements.txt.
 
 Populating the Database:
 To seed the Firestore database with sample data, run:
@@ -16,7 +19,8 @@ To seed the Firestore database with sample data, run:
 What the Script Does:
   - Connects to Firebase using the service account key.
   - Clears existing documents from the "volunteers" and "requests" collections.
-  - Inserts 7 sample volunteer records and 6 aid requests (with predefined IDs such as "101", "102", etc.) using batch writes for efficiency.
+  - Inserts 7 sample volunteer records and 6 aid requests (with predefined IDs such as "101", "102", etc.) 
+  using batch writes for efficiency.
 
 Expected Console Output (sample):
   Firebase Admin SDK initialized successfully for population script.
