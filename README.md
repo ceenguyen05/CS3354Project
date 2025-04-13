@@ -73,15 +73,39 @@ A full-stack web application designed to facilitate disaster response efforts th
 
 ## Testing
 
-To test:
+**Step 1: Create a Firebase Project**
+
+1. Go to the [Firebase Console](https://console.firebase.google.com/).
+2. Click **“Add project”** and follow the steps (you can skip Google Analytics if you prefer).
+3. Once created, your project dashboard will load. You’re now ready to generate a key.
+
+**Step 2: Generate a Service Account Private Key**
+
+1. In the Firebase Console, click the ⚙️ **gear icon** next to **Project Overview** and choose **Project settings**.
+2. Go to the **Service accounts** tab.
+3. Make sure **Python** is selected under  **Admin SDK configuration snippet** **.**
+4. Click the blue **“Generate new private key”** button.
+5. A **.json** key file will download to your system automatically.
+
+**Step 3: Rename and Move the Key File**
+
+1. Rename the downloaded **.json** file to:
+
+```
+serviceAccountKey.json
+```
+
+Move this file into `code_1/backend`
+
+**Step 4: Running the Code**
+
+Now, run:
 
 ```bash
 make run-all # starts both the backend and frontend
 ```
 
-If you get error 127, run this `export PATH="$PATH:/path/to/flutter/bin"` and then restart your shell via `source ~/.zshrc` and then  edit the variable in the Makefile as well and finally, rerun.
-
-if you get error 48, run `lsof -i :8001` and then kill the listed processes via `kill -9 PID1 PID2` and then rerun. You should run this after every program run.
+If you get error 48, run `lsof -i :8001` and then kill the listed processes via `kill -9 PID1 PID2` and then rerun. You should run this after every program run.
 
 Uses `pytest` to validate:
 
@@ -98,7 +122,7 @@ make test
 ## Deployment
 
 - **Backend**: Run with Uvicorn or via Docker. `127.0.0.1:8001/match/101`
-- **Frontend**: Flutter web app deployable via standard web server. `127.0.0.1:55242`
+- **Frontend**: Flutter web app deployable via standard web server. `127.0.0.1:PORT`
 - Docker setup provided for containerized deployment.
 
 ## Security

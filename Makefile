@@ -35,8 +35,11 @@ ACTIVATE=. $(VENV_DIR)/bin/activate;
 # Path to the requirements file
 REQS=code_1/backend/requirements.txt
 
-# Path to the Flutter executable (SET YOUR OWN PATH)
-FLUTTER_PATH?=/Users/kevinpulikkottil/flutter/bin
+# Path to the Flutter executable
+FLUTTER_BIN := $(shell command -v flutter 2>/dev/null)
+ifndef FLUTTER_BIN
+$(error ❌ Flutter executable not found in PATH. Please ensure Flutter is installed and added to PATH.)
+endif
 
 # Default target: run the FastAPI server with the service account environment variable set.
 run:
@@ -82,4 +85,4 @@ run-all: setup populate-db
 	@echo "Backend is ready."
 	@echo "Starting Flutter frontend..."
 	# Change directory to code_1 and run the Flutter app
-	cd code_1 && $(FLUTTER_PATH)/flutter run lib/main.dart
+	cd code_1 && $(FLUTTER_BIN) run lib/main.dart
