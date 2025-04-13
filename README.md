@@ -1,220 +1,124 @@
-# CS 3354 Team 2 Project: Crowdsourced Disaster Relief Platform - AI Matching Backend
+# Crowdsourced Disaster Relief Platform
 
-This project is a FastAPI-based volunteer/request matching system that interacts with a Firebase Firestore database. It leverages an AI-powered matching module to intelligently connect disaster aid requests with the most appropriate volunteers. The project includes a backend service, data population scripts, functional tests, and optional Docker support.
+A full-stack web application designed to facilitate disaster response efforts through crowdsourcing. The platform connects individuals in need with volunteers and donors, providing real-time data on available resources and emergency alerts.
 
----
+## Features
 
-## Quick Start
+- **AI-Based Volunteer Matching**: Matches aid requests with suitable volunteers using KNN algorithm.
+- **Resource Management**: Real-time resource inventory by region.
+- **Donation & Request Handling**: Interfaces for submitting aid requests and making donations.
+- **Emergency Alerts**: Live and historical alert system for disaster events.
+- **Secure Firebase Backend**: Cloud-hosted NoSQL database via Firestore.
+- **Mobile-Friendly**: Built with Flutter for cross-platform deployment.
 
-### 1. Clone the Repository
+## Tech Stack
+
+**Frontend**
+
+- Flutter (Dart)
+
+**Backend**
+
+- FastAPI (Python)
+- Firebase Firestore
+- AI Matching: scikit-learn, NumPy, Geopy, Joblib
+
+**Other Tools**
+
+- Docker (optional deployment)
+- VSCode
+- Pytest for testing
+
+## Architecture
+
+- **Frontend** interacts with users and posts data to backend APIs.
+- **Backend** handles logic, including AI-based volunteer matching.
+- **Database** stores all structured data like users, requests, donations, alerts, and resources.
+
+## Data Models
+
+- **Users**: Basic login info.
+- **Requests**: Type, location, and description of help needed.
+- **Donations**: Donor info and donation type/description.
+- **Alerts**: Emergency type, description, severity, and date.
+- **Resources**: Inventory tracking by area.
+
+## AI Matching
+
+- Uses one-hot encoding and K-Nearest Neighbors (KNN).
+- Inputs: Request type, location, urgency.
+- Matches with volunteers based on skills, location, and availability.
+
+## API Endpoints
+
+* **Root:**
+  [http://localhost:8001/](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html)
+* **Production Match Endpoint:**
+  [http://localhost:8001/match/{request_id}](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html)
+* **Debug Match Endpoint:**
+  [http://localhost:8001/debug-match/{request_id}](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html)
+* **Swagger UI:**
+  [http://localhost:8001/docs](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html)
+* **ReDoc:**
+  [http://localhost:8001/redoc](vscode-file://vscode-app/Applications/Visual%20Studio%20Code.app/Contents/Resources/app/out/vs/code/electron-sandbox/workbench/workbench.html)
+
+## Frontend Pages
+
+- Home: Navigation to all features.
+- Request Help: Submit aid requests.
+- Donate: Monetary or material contributions.
+- Emergency Alerts: View disaster warnings.
+- Resource Inventory: Check resource availability.
+- Sign Up / Sign In: Placeholder UI for user authentication.
+
+## Testing
+
+To test:
 
 ```bash
-git clone https://github.com/Sawyer-Anderson1/CS_3354_Team_2_Project.git
-cd CS_3354_Team_2_Project
+make run-all # starts both the backend and frontend
 ```
 
-### 2. Set Up Your Environment
+If you get error 127, run this `export PATH="$PATH:/path/to/flutter/bin"` and then restart your shell via `source ~/.zshrc` and then  edit the variable in the Makefile as well and finally, rerun.
 
-```bash
-make setup
+if you get error 48, run `lsof -i :8001` and then kill the listed processes via `kill -9 PID1 PID2` and then rerun. You should run this after closing the program.
+
+Uses `pytest` to validate:
+
+- Successful match queries
+- Data structure of responses
+- Handling of invalid IDs
+
+Run:
+
 ```
-
-This command will:
-
-- Create a Python virtual environment in `1_code/venv/`
-- Install all dependencies from `1_code/requirements.txt`
-
----
-
-## Firebase Setup
-
-1. **Download** your Firebase service account key (JSON file).
-2. **Place it** in the `1_code/` directory.
-3. **Ensure the filename is:** `serviceAccountKey.json`
-
-> This file is excluded from Git using `.gitignore` and must be added manually.
-
----
-
-## Running the Backend Server
-
-Start the FastAPI server with:
-
-```bash
-make run
-```
-
-This command:
-
-- Activates the virtual environment.
-- Sets the `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
-- Launches the server at [http://localhost:8000](http://localhost:8000).
-
-Swagger UI is available at [http://localhost:8000/docs](http://localhost:8000/docs).
-
----
-
-## AI Matching Implementation
-
-The backend uses an AI matching module (in `matching_ai.py`) to process disaster aid requests and match them with volunteers. The process includes:
-
-- **Feature Extraction:**The module converts request and volunteer data into numerical feature vectors using:
-
-  - One-hot encoding for categorical attributes (request type and volunteer skills)
-  - Geocoding (using geopy) to convert addresses into latitude/longitude coordinates
-  - Numeric mapping for urgency (for requests) and availability (for volunteers)
-- **KNN Matching:**The feature vectors are normalized using StandardScaler, and scikit-learn’s K-Nearest Neighbors (KNN) algorithm computes Euclidean distances to determine the top matches.
-- **Debug Endpoint:**A dedicated endpoint (`/debug-match/{request_id}`) returns detailed matching information including:
-
-  - Raw feature vectors
-  - Scaled feature matrices
-  - Distance calculations and neighbor indices
-  - The final list of matched volunteer records
-
----
-
-## Populating the Firestore Database
-
-Populate your Firestore database with sample data by running:
-
-```bash
-make populate-db
-```
-
-This command:
-
-- Connects to Firebase using your service account key.
-- Clears existing documents from the `volunteers` and `requests` collections.
-- Inserts sample data (7 volunteer records and 6 aid requests with predefined IDs) using batch writes for efficiency.
-
----
-
-## Running Tests
-
-To run unit tests for the matching endpoint, execute:
-
-```bash
 make test
 ```
 
-This command uses pytest to run tests defined in `3_basic_function_testing/test_matching.py`. The tests verify that:
+## Deployment
 
-- Valid request IDs (e.g., `/match/101`, `/match/102`) return HTTP 200 with a properly formed JSON response.
-- An invalid request ID (e.g., `/match/999`) returns the appropriate error (404).
+- **Backend**: Run with Uvicorn or via Docker. `127.0.0.1:8001/match/101`
+- **Frontend**: Flutter web app deployable via standard web server. `127.0.0.1:55242`
+- Docker setup provided for containerized deployment.
 
----
+## Security
 
-## Docker (Optional)
+- Firebase credentials are secured and excluded via `.gitignore`.
+- Placeholder user auth exists in frontend, backend integration pending.
 
-> **Note:** Ensure Docker Desktop is running before using Docker commands.
+## Known Limitations
 
-### Starting Docker Containers
+- Frontend/backend not yet fully integrated.
+- Auth not implemented in backend.
+- Basic UI, full design coming in next iteration.
 
-```bash
-make docker-up
-```
+## Team
 
-If Docker Desktop isn't running, you'll see an error. Start Docker Desktop, then try again.
-
-### Stopping Docker Containers
-
-Stop the server with CTRL+C and then run:
-
-```bash
-make docker-down
-```
+- Casey Nguyen
+- Kevin Pulikkottil
+- Andy Jih
+- Sawyer Anderson
 
 ---
 
-## Project Structure
-
-```
-CS_3354_Team_2_Project/
-├── 1_code/
-│   ├── main.py                  # FastAPI app with /match and /debug-match endpoints
-│   ├── matching_ai.py           # AI module for feature extraction and KNN matching
-│   ├── docker-compose.yml       # Docker configuration (optional)
-│   ├── serviceAccountKey.json   # Firebase credentials (manually added; not in Git)
-│   └── venv/                    # Python virtual environment (excluded from Git)
-├── 2_data_collection/
-│   └── populate_database.py     # Script to populate Firestore with sample data
-├── 3_basic_function_testing/
-│   └── test_matching.py         # Pytest tests for the matching endpoint
-├── requirements.txt             # Python dependencies
-├── Makefile                     # CLI shortcuts (setup, run, test, populate-db, Docker)
-├── .gitignore                   # Excludes sensitive files and auto-generated content
-└── README.md                    # This comprehensive project documentation
-```
-
----
-
-## Cleaning Up
-
-To remove auto-generated files and `__pycache__` folders, run:
-
-```bash
-make clean
-```
-
----
-
-## Sample API Output
-
-### Standard Matching Endpoint
-
-**API Call:**
-
-```
-GET http://localhost:8000/match/101
-```
-
-**Sample JSON Response:**
-
-```json
-{
-  "matched_volunteers": [
-    {
-      "id": "Ez7DJu4ZGrTljzHbiazy",
-      "name": "Alice",
-      "skills": "Medical",
-      "location": "Houston, TX"
-    },
-    {
-      "id": "AbozkwHssJX2zBEWlLXb",
-      "name": "Ethan",
-      "skills": "Medical",
-      "location": "Fort Worth, TX"
-    },
-    {
-      "id": "CNMZLygFonduGYU06vrg",
-      "name": "Fiona",
-      "skills": "Transportation",
-      "location": "Houston, TX"
-    }
-  ]
-}
-```
-
-### Debug Matching Endpoint
-
-To view detailed matching information, visit:
-
-```
-GET http://localhost:8000/debug-match/101
-```
-
-This endpoint returns debugging details such as:
-
-- Raw and scaled feature vectors for the aid request and volunteers.
-- Distance calculations and neighbor indices from the KNN matching process.
-- The final list of matched volunteer records.
-
----
-
-## Notes
-
-- The Makefile automates common tasks (setup, run, test, populate-db, Docker).
-- Docker commands require Docker Desktop to be running.
-- Ensure the `serviceAccountKey.json` file is placed in the `1_code/` directory and is not committed to Git.
-- The debug endpoint is intended for development purposes only; secure or disable it in production.
-- The AI matching system is a prototype—you can refine the feature extraction and KNN parameters as more data becomes available.
+2025 Group 2 - CS 3354
