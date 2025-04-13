@@ -81,7 +81,7 @@ make run-all # starts both the backend and frontend
 
 If you get error 127, run this `export PATH="$PATH:/path/to/flutter/bin"` and then restart your shell via `source ~/.zshrc` and then  edit the variable in the Makefile as well and finally, rerun.
 
-if you get error 48, run `lsof -i :8001` and then kill the listed processes via `kill -9 PID1 PID2` and then rerun. You should run this after closing the program.
+if you get error 48, run `lsof -i :8001` and then kill the listed processes via `kill -9 PID1 PID2` and then rerun. You should run this after every program run.
 
 Uses `pytest` to validate:
 
