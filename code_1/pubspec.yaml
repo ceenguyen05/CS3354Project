@@ -31,3 +31,6 @@ flutter:
     - assets/json_files/donations.json
     - assets/json_files/current_requests.json
     - assets/json_files/users.json
+    - assets/logo.png
+
+  
