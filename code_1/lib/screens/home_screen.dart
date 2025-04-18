@@ -1,15 +1,15 @@
-// Home Screen UI 
-// imports all the screens and calls them here 
-// This will be the first screen the user sees when they enter the webiste 
-// for deliverable 1, we didn't focus much on the design, just getting the key funcitons down 
-// for deliverable 2 we will make the websites more aethetically appeasing 
+// Home Screen UI
+// This is the first screen the user sees when they enter the website.
+// Deliverable 1 focused on functionality; Deliverable 2 will enhance design.
 
 import 'package:flutter/material.dart';
+import 'package:code_1/widgets/centered_view.dart';
 import 'resource_inventory_screen.dart';
 import 'emergency_alerts_screen.dart';
 import 'donation_screen.dart';
 import 'request_posting_screen.dart';
-import 'profile_screen.dart' ;
+import 'profile_screen.dart';
+import 'package:code_1/navbar/nav_bar.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,6 +17,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
           'Crowdsourced Disaster Relief System',
@@ -27,15 +28,16 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0), // Add padding around the body
+      body: CenteredView(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start, // Align to top
-          crossAxisAlignment: CrossAxisAlignment.center, // Center the children horizontally
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 18), // Add some space between title and buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center, // Center buttons horizontally
+            CustomNavigationBar(), // Custom nav bar widget
+            const SizedBox(height: 18),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 18.0,
+              runSpacing: 18.0,
               children: [
                 ElevatedButton(
                   onPressed: () {
@@ -47,18 +49,17 @@ class HomeScreen extends StatelessWidget {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 20,
+                      horizontal: 30,
+                    ),
                   ),
                   child: const Text(
                     'See Available Resource Inventory',
                     style: TextStyle(fontSize: 18),
                   ),
                 ),
-                const SizedBox(width: 18),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
-                  ),
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -67,17 +68,18 @@ class HomeScreen extends StatelessWidget {
                       ),
                     );
                   },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 20,
+                      horizontal: 30,
+                    ),
+                  ),
                   child: const Text(
                     'Request for Help',
                     style: TextStyle(fontSize: 18),
                   ),
                 ),
-                const SizedBox(width: 18),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.greenAccent,
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
-                  ),
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -86,17 +88,18 @@ class HomeScreen extends StatelessWidget {
                       ),
                     );
                   },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 20,
+                      horizontal: 30,
+                    ),
+                  ),
                   child: const Text(
                     'Donate Now!',
                     style: TextStyle(fontSize: 18),
                   ),
                 ),
-                const SizedBox(width: 18),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color.fromARGB(255, 235, 93, 93),
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
-                  ),
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -105,16 +108,18 @@ class HomeScreen extends StatelessWidget {
                       ),
                     );
                   },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 20,
+                      horizontal: 30,
+                    ),
+                  ),
                   child: const Text(
                     'See Emergency Alerts',
                     style: TextStyle(fontSize: 18),
                   ),
                 ),
-                const SizedBox(width: 18),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
-                  ),
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -123,6 +128,12 @@ class HomeScreen extends StatelessWidget {
                       ),
                     );
                   },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 20,
+                      horizontal: 30,
+                    ),
+                  ),
                   child: const Text(
                     'Sign Up/Sign In',
                     style: TextStyle(fontSize: 18),

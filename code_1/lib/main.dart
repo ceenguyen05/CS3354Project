@@ -17,7 +17,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Disaster Relief Web App',
-      theme: ThemeData(primarySwatch: Colors.indigo),
+      theme: ThemeData(
+        primarySwatch: Colors.indigo,
+        textTheme: Theme.of(context).textTheme.apply(
+          fontFamily: 'Open Sans',)
+        ),
       home: const HomeScreen(), // Set HomeScreen as the starting point
     );
   }
