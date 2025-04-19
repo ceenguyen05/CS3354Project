@@ -40,7 +40,7 @@ class TeamWidget extends StatelessWidget {
                 SizedBox(height: 10),
                 ContactItem(
                   label: 'Andy',
-                  value: '1 UI Screen',
+                  value: 'Frontend',
                 ),
                 SizedBox(height: 10),
                 ContactItem(
