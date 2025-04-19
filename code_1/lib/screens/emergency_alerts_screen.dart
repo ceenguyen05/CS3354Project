@@ -55,23 +55,62 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
 
           final alertsList = snapshot.data!;
 
-          return ListView.builder(
-            itemCount: alertsList.length,
-            itemBuilder: (context, index) {
-              final alert = alertsList[index];
-              return ListTile(
-                title: Text(alert.alertTitle),
-                subtitle: Text(
-                  "${alert.alertDescription}\nLocation: ${alert.alertLocation} \nDate: ${alert.alertDate}",
-                  style: const TextStyle(fontSize: 14), // Adjust subtitle text size
-                  maxLines: 3, // Limit subtitle to 3 lines
-                  overflow: TextOverflow.ellipsis, // Handle overflow gracefully
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: List.generate(
+                  alertsList.length,
+                  (index) {
+                    final alert = alertsList[index];
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFFFFFFFF),
+                            Color(0xFFE0F7FA),
+                            Color(0xFFB2EBF2),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(),
+                            blurRadius: 5,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(12),
+                        title: Text(
+                          alert.alertTitle,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        subtitle: Text(
+                          "${alert.alertDescription}\nLocation: ${alert.alertLocation} \nDate: ${alert.alertDate}",
+                          style: const TextStyle(fontSize: 14), // Adjust subtitle text size
+                          maxLines: 3, // Limit subtitle to 3 lines
+                          overflow: TextOverflow.ellipsis, // Handle overflow gracefully
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ),
           );
         },
       ),
     );
   }
 }
+
+
+
