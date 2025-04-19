@@ -32,5 +32,8 @@ flutter:
     - assets/json_files/current_requests.json
     - assets/json_files/users.json
     - assets/logo.png
-
+  fonts:
+    - family: ComicSans
+      fonts:
+        - asset: fonts/comic_sans.ttf
   
