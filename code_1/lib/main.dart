@@ -19,11 +19,11 @@ class MyApp extends StatelessWidget {
       title: 'Disaster Relief Web App',
       theme: ThemeData(
         primarySwatch: Colors.indigo,
-        textTheme: Theme.of(context).textTheme.apply(
-          fontFamily: 'Open Sans',)
-        ),
+        fontFamily: 'ComicSans', // <-- Set the global font here
+      ),
       home: const HomeScreen(), // Set HomeScreen as the starting point
     );
   }
 }
+
 
