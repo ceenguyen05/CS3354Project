@@ -116,7 +116,7 @@ class _DonationScreenState extends State<DonationScreen> {
                     decoration: const InputDecoration(labelText: "Amount / Description"),
                     validator: (value) => value == null || value.isEmpty ? "Enter a description" : null,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _submitDonation,
                     // ignore: sort_child_properties_last
