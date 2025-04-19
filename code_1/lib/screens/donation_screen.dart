@@ -79,6 +79,13 @@ class _DonationScreenState extends State<DonationScreen> {
     });
   }
 
+  Icon _getDonationIcon(String type) {
+    return Icon(
+      type == 'Money' ? Icons.attach_money : Icons.volunteer_activism,
+      color: type == 'Money' ? Colors.green : Colors.redAccent,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -138,7 +145,7 @@ class _DonationScreenState extends State<DonationScreen> {
                 itemBuilder: (context, index) {
                   final d = _donations[index];
                   return ListTile(
-                    leading: const Icon(Icons.volunteer_activism),
+                    leading: _getDonationIcon(d.type),
                     title: Text("${d.name} donated ${d.detail}"),
                     subtitle: Text(d.type),
                   );
@@ -151,3 +158,4 @@ class _DonationScreenState extends State<DonationScreen> {
     );
   }
 }
+
