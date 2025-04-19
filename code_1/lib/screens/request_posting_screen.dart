@@ -133,7 +133,7 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                     validator: (value) =>
                         (value == null || value.isEmpty) ? 'Please enter a description' : null,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _getLocation,
                     child: const Text('Get My Location'),
@@ -153,7 +153,7 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                         style: TextStyle(color: Colors.red),
                       ),
                     ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _submitRequest,
                     child: const Text('Submit Request'),
