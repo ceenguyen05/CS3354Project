@@ -21,13 +21,8 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
   String _description = '';
   String _name = '';
   Position? _location;
-  late Future<List<Request>> _currentRequests;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentRequests = fetchCurrentRequests();
-  }
+  bool _locationMissingError = false;
+  final List<Request> _submittedRequests = [];
 
   Future<void> _getLocation() async {
     final permission = await Geolocator.checkPermission();
@@ -35,10 +30,17 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
       await Geolocator.requestPermission();
     }
     final position = await Geolocator.getCurrentPosition();
-    setState(() => _location = position);
+    setState(() {
+      _location = position;
+      _locationMissingError = false; // Clear error if location is retrieved
+    });
   }
 
   void _submitRequest() {
+    setState(() {
+      _locationMissingError = _location == null;
+    });
+
     if (_formKey.currentState!.validate() && _location != null) {
       _formKey.currentState!.save();
 
@@ -57,20 +59,39 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
       );
 
       setState(() {
-        _currentRequests = Future.value(_currentRequestsList);
-        // Reset the form fields and location
+        _submittedRequests.add(request);
         _formKey.currentState!.reset();
         _location = null;
         _aidType = 'Medical';
         _description = '';
         _name = '';
+        _locationMissingError = false;
       });
     }
   }
 
-  List<Request> get _currentRequestsList => _location != null ? _currentRequestsListInternal : [];
+  Icon _getAidIcon(String type) {
+    switch (type) {
+      case 'Medical':
+        return const Icon(Icons.local_hospital, color: Colors.red);
+      case 'Food':
+        return const Icon(Icons.restaurant, color: Colors.orange);
+      case 'Shelter':
+        return const Icon(Icons.home, color: Colors.green);
+      default:
+        return const Icon(Icons.help_outline);
+    }
+  }
 
-  List<Request> _currentRequestsListInternal = [];
+  @override
+  void initState() {
+    super.initState();
+    fetchCurrentRequests().then((requests) {
+      setState(() {
+        _submittedRequests.addAll(requests);
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,31 +99,25 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
       appBar: AppBar(
         title: const Text(
           'Submit Aid Request',
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
-            Form(
+      body: Column(
+        children: [
+          // Form Section
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
               key: _formKey,
               child: Column(
                 children: [
                   TextFormField(
                     decoration: const InputDecoration(labelText: 'Your Name'),
                     onSaved: (value) => _name = value ?? '',
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your name';
-                      }
-                      return null;
-                    },
+                    validator: (value) =>
+                        (value == null || value.isEmpty) ? 'Please enter your name' : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: _aidType,
                     items: ['Medical', 'Food', 'Shelter']
@@ -111,12 +126,14 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                     onChanged: (value) => setState(() => _aidType = value!),
                     decoration: const InputDecoration(labelText: 'Aid Type'),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   TextFormField(
                     decoration: const InputDecoration(labelText: 'Description'),
                     onSaved: (value) => _description = value ?? '',
+                    validator: (value) =>
+                        (value == null || value.isEmpty) ? 'Please enter a description' : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: _getLocation,
                     child: const Text('Get My Location'),
@@ -128,7 +145,15 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                         'Lat: ${_location!.latitude}, Long: ${_location!.longitude}',
                       ),
                     ),
-                  const SizedBox(height: 24),
+                  if (_locationMissingError)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        'Please get your location',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: _submitRequest,
                     child: const Text('Submit Request'),
@@ -136,45 +161,35 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            const Divider(),
-            const Text(
+          ),
+          const Divider(height: 1),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: Text(
               "Current Requests for Help:",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
-            FutureBuilder<List<Request>>(
-              future: _currentRequests,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return const Center(child: Text('Error loading requests.'));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No current requests for help.'));
-                }
-
-                final requests = snapshot.data!;
-                _currentRequestsListInternal = requests;
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: requests.length,
-                  itemBuilder: (context, index) {
-                    final request = requests[index];
-                    return ListTile(
-                      title: Text('${request.name} - ${request.type}'),
-                      subtitle: Text('${request.description}\nLat: ${request.latitude}, Long: ${request.longitude}'),
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        ),
+          ),
+          // List of Requests
+          Expanded(
+            child: _submittedRequests.isEmpty
+                ? const Center(child: Text('No current requests for help.'))
+                : ListView.builder(
+                    itemCount: _submittedRequests.length,
+                    itemBuilder: (context, index) {
+                      final request = _submittedRequests[index];
+                      return ListTile(
+                        leading: _getAidIcon(request.type),
+                        title: Text('${request.name} - ${request.type}'),
+                        subtitle: Text(
+                          '${request.description}\nLat: ${request.latitude}, Long: ${request.longitude}',
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
 }
-
