@@ -68,7 +68,7 @@ class _UserStoriesWidgetState extends State<UserStoriesWidget> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 25),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

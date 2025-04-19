@@ -13,6 +13,9 @@ import '../widgets/intro.dart';
 import '../widgets/intro2.dart';
 import '../widgets/user_stories.dart'; 
 import '../widgets/explanation.dart'; 
+import '../widgets/contact.dart'; 
+import '../widgets/social.dart'; 
+import '../widgets/team.dart';    
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -38,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       curve: Curves.easeIn,
     );
 
-    _fadeController.forward(); // Start animation when screen loads
+    _fadeController.forward(); 
   }
 
   @override
@@ -117,7 +120,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 const SizedBox(height: 120),
                 FadeTransition(
                   opacity: _fadeAnimation,
-                  child: const ExplanationWidget(), 
+                  child: const ExplanationWidget(),
+                ),
+                const SizedBox(height: 120),
+                // Updated Row with Social and Team Widgets wrapped in a Wrap widget
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 22.0, // Space between widgets
+                    runSpacing: 22.0, // Space between rows
+                    children: [
+                      Flexible(
+                        child: SocialWidget(),  // Left Widget (SocialWidget)
+                      ),
+                      Flexible(
+                        child: ContactInfoWidget(),  // Middle Widget (ContactInfoWidget)
+                      ),
+                      Flexible(
+                        child: TeamWidget(),  // Right Widget (TeamWidget)
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -156,4 +180,3 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 }
-
