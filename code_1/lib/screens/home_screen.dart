@@ -1,4 +1,4 @@
-// Home Screen UI
+// animations/transitions: Home Screen UI
 // This is the first screen the user sees when they enter the website.
 // Deliverable 1 focused on functionality; Deliverable 2 will enhance design.
 
@@ -12,8 +12,38 @@ import 'package:code_1/navbar/nav_bar.dart';
 import '../widgets/intro.dart'; // Left-side intro
 import '../widgets/intro2.dart'; // Right-side intro
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeIn,
+    );
+
+    _fadeController.forward(); // Start animation when screen loads
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,104 +67,45 @@ class HomeScreen extends StatelessWidget {
               children: [
                 const CustomNavigationBar(),
                 const SizedBox(height: 18),
-                Padding(
-                  padding: const EdgeInsets.only(top: 30),
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 18.0,
-                    runSpacing: 18.0,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ResourceInventoryScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 20,
-                            horizontal: 30,
-                          ),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 30),
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 18.0,
+                      runSpacing: 18.0,
+                      children: [
+                        _animatedButton(
+                          label: 'See Available Resource Inventory',
+                          page: const ResourceInventoryScreen(),
                         ),
-                        child: const Text(
-                          'See Available Resource Inventory',
-                          style: TextStyle(fontSize: 18),
+                        _animatedButton(
+                          label: 'Request for Help',
+                          page: const RequestPostingScreen(),
                         ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const RequestPostingScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 20,
-                            horizontal: 30,
-                          ),
+                        _animatedButton(
+                          label: 'Donate Now!',
+                          page: const DonationScreen(),
                         ),
-                        child: const Text(
-                          'Request for Help',
-                          style: TextStyle(fontSize: 18),
+                        _animatedButton(
+                          label: 'See Emergency Alerts',
+                          page: const EmergencyAlertsScreen(),
                         ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const DonationScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 20,
-                            horizontal: 30,
-                          ),
-                        ),
-                        child: const Text(
-                          'Donate Now!',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const EmergencyAlertsScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 20,
-                            horizontal: 30,
-                          ),
-                        ),
-                        child: const Text(
-                          'See Emergency Alerts',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 30),
-                // Put both intros side by side
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Expanded(child: Intro()),   // Left side
-                    Expanded(child: Intro2()),  // Right side
-                  ],
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Expanded(child: Intro()),   // Left side
+                      Expanded(child: Intro2()),  // Right side
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -143,5 +114,35 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+
+  Widget _animatedButton({required String label, required Widget page}) {
+    return ElevatedButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => page,
+            transitionsBuilder: (_, animation, __, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+          ),
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(
+          vertical: 20,
+          horizontal: 30,
+        ),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 18),
+      ),
+    );
+  }
 }
+
 
