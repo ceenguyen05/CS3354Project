@@ -86,16 +86,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           page: const ResourceInventoryScreen(),
                         ),
                         _animatedButton(
+                          label: 'See Emergency Alerts',
+                          page: const EmergencyAlertsScreen(),
+                        ),
+                        _animatedButton(
                           label: 'Request for Help',
                           page: const RequestPostingScreen(),
                         ),
                         _animatedButton(
                           label: 'Donate Now!',
                           page: const DonationScreen(),
-                        ),
-                        _animatedButton(
-                          label: 'See Emergency Alerts',
-                          page: const EmergencyAlertsScreen(),
                         ),
                       ],
                     ),
