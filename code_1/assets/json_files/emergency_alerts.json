@@ -2,31 +2,37 @@
     {
       "alertTitle": "Flood Warning",
       "alertDescription": "Severe flooding expected in the downtown area. Please evacuate immediately.",
+      "alertLocation" :"Plano, Texas",
       "alertDate": "2025-04-05"
     },
     {
       "alertTitle": "Hail Watch",
       "alertDescription": "Hail possible in the region. Take shelter immediately.",
+      "alertLocation" :"Richardson, Texas",
       "alertDate": "2025-04-05"
     },
     {
       "alertTitle": "Flood Warning",
       "alertDescription": "Severe flooding expected in the downtown area. Please evacuate immediately.",
+      "alertLocation" :"Garland, Texas",
       "alertDate": "2025-04-06"
     },
     {
       "alertTitle": "Thunder Watch",
       "alertDescription": "Thunder possible in the region. Take shelter immediately.",
+      "alertLocation" :"Allen, Texas",
       "alertDate": "2025-04-06"
     },
     {
       "alertTitle": "Earthquake Warning",
       "alertDescription": "Earthquake expected in the downtown area. Please evacuate immediately.",
+      "alertLocation" :"Frisco, Texas",
       "alertDate": "2025-04-07"
     },
     {
       "alertTitle": "Wildfire Alert",
       "alertDescription": "A wildfire has been reported near your area. Stay inside and monitor for updates.",
+      "alertLocation" :"Dallas, Texas",
       "alertDate": "2025-04-07"
     }
   ]
