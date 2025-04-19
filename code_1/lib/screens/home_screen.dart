@@ -1,4 +1,4 @@
-// animations/transitions: Home Screen UI
+// Home Screen UI
 // This is the first screen the user sees when they enter the website.
 // Deliverable 1 focused on functionality; Deliverable 2 will enhance design.
 
@@ -9,8 +9,10 @@ import 'emergency_alerts_screen.dart';
 import 'donation_screen.dart';
 import 'request_posting_screen.dart';
 import 'package:code_1/navbar/nav_bar.dart';
-import '../widgets/intro.dart'; // Left-side intro
-import '../widgets/intro2.dart'; // Right-side intro
+import '../widgets/intro.dart';
+import '../widgets/intro2.dart';
+import '../widgets/user_stories.dart'; 
+import '../widgets/explanation.dart'; 
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -107,6 +109,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ],
                   ),
                 ),
+                const SizedBox(height: 120),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: const UserStoriesWidget(),
+                ),
+                const SizedBox(height: 120),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: const ExplanationWidget(), 
+                ),
               ],
             ),
           ),
@@ -144,5 +156,4 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 }
-
 
