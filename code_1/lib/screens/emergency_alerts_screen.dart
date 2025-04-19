@@ -58,7 +58,7 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
               final alert = alertsList[index];
               return ListTile(
                 title: Text(alert.alertTitle),
-                subtitle: Text("${alert.alertDescription}\nDate: ${alert.alertDate}"),
+                subtitle: Text("${alert.alertDescription}\nLocation: ${alert.alertLocation} \nDate: ${alert.alertDate}"),
               );
             },
           );
