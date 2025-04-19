@@ -1,7 +1,7 @@
-// UI for user request screen 
+// UI for user request screen
 // Creates a basics screen and imports the model and service darts for this specific function
 // Asks the user for the name, aidtype, and description
-// Also has a geo locator to see the users current and direct location 
+// Also has a geo locator to see the users current and direct location
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -32,7 +32,7 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
     final position = await Geolocator.getCurrentPosition();
     setState(() {
       _location = position;
-      _locationMissingError = false; // Clear error if location is retrieved
+      _locationMissingError = false;
     });
   }
 
@@ -93,102 +93,163 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
     });
   }
 
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+    );
+  }
+
+  ButtonStyle _buttonStyle() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: Colors.white, // soft sky blue
+      foregroundColor: Colors.black,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
           'Submit Aid Request',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
-      body: Column(
-        children: [
-          // Form Section
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    decoration: const InputDecoration(labelText: 'Your Name'),
-                    onSaved: (value) => _name = value ?? '',
-                    validator: (value) =>
-                        (value == null || value.isEmpty) ? 'Please enter your name' : null,
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _aidType,
-                    items: ['Medical', 'Food', 'Shelter']
-                        .map((type) => DropdownMenuItem(value: type, child: Text(type)))
-                        .toList(),
-                    onChanged: (value) => setState(() => _aidType = value!),
-                    decoration: const InputDecoration(labelText: 'Aid Type'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    decoration: const InputDecoration(labelText: 'Description'),
-                    onSaved: (value) => _description = value ?? '',
-                    validator: (value) =>
-                        (value == null || value.isEmpty) ? 'Please enter a description' : null,
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _getLocation,
-                    child: const Text('Get My Location'),
-                  ),
-                  if (_location != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        'Lat: ${_location!.latitude}, Long: ${_location!.longitude}',
-                      ),
-                    ),
-                  if (_locationMissingError)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        'Please get your location',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _submitRequest,
-                    child: const Text('Submit Request'),
-                  ),
-                ],
-              ),
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFFFFFFF), // white
+              Color(0xFFE0F7FA), // very light blue
+              Color(0xFFB2EBF2), // soft sky blue
+            ],
           ),
-          const Divider(height: 1),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-              "Current Requests for Help:",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ),
-          // List of Requests
-          Expanded(
-            child: _submittedRequests.isEmpty
-                ? const Center(child: Text('No current requests for help.'))
-                : ListView.builder(
-                    itemCount: _submittedRequests.length,
-                    itemBuilder: (context, index) {
-                      final request = _submittedRequests[index];
-                      return ListTile(
-                        leading: _getAidIcon(request.type),
-                        title: Text('${request.name} - ${request.type}'),
-                        subtitle: Text(
-                          '${request.description}\nLat: ${request.latitude}, Long: ${request.longitude}',
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      decoration: _inputDecoration('Your Name'),
+                      onSaved: (value) => _name = value ?? '',
+                      validator: (value) => (value == null || value.isEmpty)
+                          ? 'Please enter your name'
+                          : null,
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: _aidType,
+                      items: ['Medical', 'Food', 'Shelter']
+                          .map(
+                            (type) => DropdownMenuItem(
+                              value: type,
+                              child: Text(type),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) => setState(() => _aidType = value!),
+                      decoration: _inputDecoration('Aid Type'),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: _inputDecoration('Description'),
+                      onSaved: (value) => _description = value ?? '',
+                      validator: (value) => (value == null || value.isEmpty)
+                          ? 'Please enter a description'
+                          : null,
+                    ),
+                    const SizedBox(height: 22),
+                    ElevatedButton.icon(
+                      onPressed: _getLocation,
+                      icon: const Icon(Icons.my_location),
+                      label: const Text('Get My Location'),
+                      style: _buttonStyle(),
+                    ),
+                    if (_location != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          'Lat: ${_location!.latitude}, Long: ${_location!.longitude}',
+                          style: const TextStyle(fontSize: 14),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    if (_locationMissingError)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          'Please get your location',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _submitRequest,
+                      style: _buttonStyle(),
+                      child: const Text('Submit Request'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Divider(),
+              const Padding(
+                padding: EdgeInsets.only(top: 8.0, bottom: 4),
+                child: Text(
+                  "Current Requests for Help:",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: _submittedRequests.isEmpty
+                    ? const Center(
+                        child: Text('No current requests for help.'),
+                      )
+                    : ListView.builder(
+                        itemCount: _submittedRequests.length,
+                        itemBuilder: (context, index) {
+                          final request = _submittedRequests[index];
+                          return Card(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 3,
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            child: ListTile(
+                              leading: _getAidIcon(request.type),
+                              title: Text(
+                                '${request.name} - ${request.type}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '${request.description}\nLat: ${request.latitude}, Long: ${request.longitude}',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
