@@ -1,7 +1,7 @@
 Project: Crowdsourced Disaster Relief Platform 
 Course: CS 3354 Spring 2025
 Group: 2
-Members: Casey Nguyen, Kevin Pulikkottil, Andy Jih, Sawyer Anderson
+Members: Casey Nguyen, Kevin Pulikkottil, Andy Jih
 
 Overview:
 - This backend system is designed to streamline disaster relief by matching victims’ aid requests with volunteers using an 
