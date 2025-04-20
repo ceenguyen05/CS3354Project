@@ -52,17 +52,63 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
 
           final resourcesList = snapshot.data!;
 
-          return ListView.builder(
-            itemCount: resourcesList.length,
-            itemBuilder: (context, index) {
-              final resource = resourcesList[index];
-              // ignore: avoid_print
-              print("Resource: ${resource.name}");  // Log each resource name
-              return ListTile(
-                title: Text(resource.name),
-                subtitle: Text("${resource.quantity} units - ${resource.location}"),
-              );
-            },
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: List.generate(
+                  resourcesList.length,
+                  (index) {
+                    final resource = resourcesList[index];
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFFFFFFFF),
+                            Color(0xFFE0F7FA),
+                            Color(0xFFB2EBF2),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(),
+                            blurRadius: 5,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(12),
+                        title: Text(
+                          resource.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "${resource.quantity} units",
+                              style: const TextStyle(fontSize: 14), // Adjust subtitle text size
+                            ),
+                            Text(
+                              "Location: ${resource.location}",
+                              style: const TextStyle(fontSize: 14), // Adjust subtitle text size
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
           );
         },
       ),

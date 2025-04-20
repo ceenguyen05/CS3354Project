@@ -25,6 +25,21 @@
     "location": "Wylie, TX"
   },
   {
+    "name": "Diesel (Gallons)",
+    "quantity": 30,
+    "location": "Frisco, TX"
+  } ,
+  {
+    "name": "Insulin Units",
+    "quantity": 100,
+    "location": "Richardson, TX"
+  },
+  {
+    "name": "Masks",
+    "quantity": 25,
+    "location": "Wylie, TX"
+  },
+  {
     "name": "Gas (Gallons)",
     "quantity": 40,
     "location": "Garland, TX"
