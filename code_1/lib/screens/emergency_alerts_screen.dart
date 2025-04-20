@@ -1,8 +1,8 @@
-// UI for emergency alerts 
+// UI for emergency alerts
 // Creates a basics screen and imports the model and service darts for this specific function
-// displays emergency alerts 
-// takes in the json data that is preloaded for delieverable 1 
-// in deliberable 2, will implemented a rotating emergency alerts that is randomized and displayed 
+// displays emergency alerts
+// takes in the json data that is preloaded for delieverable 1
+// in deliberable 2, will implemented a rotating emergency alerts that is randomized and displayed
 // will be updated to stay on while emergency is active and for ones that are outdated/ dealt with, will say so
 
 import 'package:flutter/material.dart';
@@ -23,94 +23,118 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
   @override
   void initState() {
     super.initState();
-    alerts = EmergencyAlertService.fetchEmergencyAlerts(); // Fetching alerts from local JSON
+    alerts = EmergencyAlertService.fetchEmergencyAlerts();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Padding(
-          padding: const EdgeInsets.only(top: 16), // Added space above the title
-          child: const Text(
-            'Emergency Alerts',
-            style: TextStyle(
-              fontSize: 26, // Larger text size
-              fontWeight: FontWeight.bold, // Make the text bold
-              color: Colors.black, // Set text color to black
-            ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: BackButton(color: Colors.black),
+        title: const Text(
+          'Emergency Alerts',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
-      body: FutureBuilder<List<Alert>>(
-        future: alerts,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return const Center(child: Text('Error loading data.'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No emergency alerts available.'));
-          }
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFFFFFFF),
+              Color(0xFFE0F7FA),
+              Color(0xFFB2EBF2),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: FutureBuilder<List<Alert>>(
+            future: alerts,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                return const Center(child: Text('Error loading data.'));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('No emergency alerts available.'));
+              }
 
-          final alertsList = snapshot.data!;
+              final alertsList = snapshot.data!;
 
-          return SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                children: List.generate(
-                  alertsList.length,
-                  (index) {
-                    final alert = alertsList[index];
-                    return Container(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFFFFFFF),
-                            Color(0xFFE0F7FA),
-                            Color(0xFFB2EBF2),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withValues(),
-                            blurRadius: 5,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: alertsList.length,
+                itemBuilder: (context, index) {
+                  final alert = alertsList[index];
+
+                  IconData icon;
+                  Color iconColor;
+
+                  switch (alert.alertTitle.toLowerCase()) {
+                    case 'flood warning':
+                      icon = Icons.water_drop;
+                      iconColor = Colors.blueAccent;
+                      break;
+                    case 'earthquake warning':
+                      icon = Icons.waves;
+                      iconColor = Colors.brown;
+                      break;
+                    case 'wildfire alert':
+                      icon = Icons.local_fire_department;
+                      iconColor = Colors.red;
+                      break;
+                    case 'thunder watch':
+                    case 'hail watch':
+                      icon = Icons.bolt;
+                      iconColor = Colors.amber;
+                      break;
+                    default:
+                      icon = Icons.warning_amber_rounded;
+                      iconColor = Colors.deepPurple;
+                  }
+
+                  return Card(
+                    elevation: 3,
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        // ignore: deprecated_member_use
+                        backgroundColor: iconColor.withOpacity(0.1),
+                        child: Icon(icon, color: iconColor),
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        title: Text(
-                          alert.alertTitle,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        subtitle: Text(
-                          "${alert.alertDescription}\nLocation: ${alert.alertLocation} \nDate: ${alert.alertDate}",
-                          style: const TextStyle(fontSize: 14), // Adjust subtitle text size
-                          maxLines: 3, // Limit subtitle to 3 lines
-                          overflow: TextOverflow.ellipsis, // Handle overflow gracefully
+                      title: Text(
+                        alert.alertTitle,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          );
-        },
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          "${alert.alertDescription}\n\n📍 Location: ${alert.alertLocation}\n📅 Date: ${alert.alertDate}",
+                          style: const TextStyle(fontSize: 14, height: 1.4),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 }
-
-
-
