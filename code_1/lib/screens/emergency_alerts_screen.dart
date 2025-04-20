@@ -38,7 +38,7 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
           'Emergency Alerts',
           style: TextStyle(
             color: Colors.black,
-            fontSize: 24,
+            fontSize: 26,
             fontWeight: FontWeight.bold,
           ),
         ),

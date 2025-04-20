@@ -93,7 +93,6 @@ class _HoverableSignInButtonState extends State<_HoverableSignInButton> {
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.black,
-                  fontWeight: FontWeight.w600,
                   letterSpacing: 1.0,
                 ),
               ),

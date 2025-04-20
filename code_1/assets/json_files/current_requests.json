@@ -3,29 +3,71 @@
     "name": "Casey Nguyen",
     "type": "Medical",
     "description": "Need medical assistance immediately.",
-    "latitude": 20.7827,
-    "longitude": -110.2374
+    "latitude": 32.7767,
+    "longitude": -96.7970
   },
   {
     "name": "Kevin",
     "type": "Shelter",
     "description": "House burned down.",
-    "latitude": 10.2947,
-    "longitude": -152.3850
+    "latitude": 32.7555,
+    "longitude": -97.3308
   },
   {
     "name": "Andy",
     "type": "Medical",
     "description": "Bleeding out",
-    "latitude": 37.7749,
-    "longitude": -122.4194
+    "latitude": 33.0198,
+    "longitude": -96.6989
   },
   {
-    "name": "Sawyer",
+    "name": "Abby",
+    "type": "Food",
+    "description": "Need food, been 3 days since last meal.",
+    "latitude": 32.7357,
+    "longitude": -97.1081
+  } ,
+  {
+    "name": "Erin",
+    "type": "Shelter",
+    "description": "Need a place for my baby and I",
+    "latitude": 32.9126,
+    "longitude": -96.6389
+  },
+  {
+    "name": "Claudia",
+    "type": "Medical",
+    "description": "My leg is broken",
+    "latitude": 33.1507,
+    "longitude": -96.8236
+  },
+  {
+    "name": "Brick",
+    "type": "Food",
+    "description": "Need anything to eat and stay alive.",
+    "latitude": 33.2148,
+    "longitude": -97.1331
+  } ,
+  {
+    "name": "Ian",
+    "type": "Shelter",
+    "description": "House is flooded, need a place to stay",
+    "latitude": 32.9756,
+    "longitude": -96.8899
+  },
+  {
+    "name": "Ashley",
+    "type": "Medical",
+    "description": "Hard to breathe",
+    "latitude": 32.9412,
+    "longitude": -97.1342
+  },
+  {
+    "name": "John",
     "type": "Food",
     "description": "Seeking food donations for a family of 5.",
-    "latitude": 34.0522,
-    "longitude": -118.2437
+    "latitude": 32.9312 ,
+    "longitude": -96.4597
   }
 ]
 

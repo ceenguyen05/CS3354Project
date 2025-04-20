@@ -149,7 +149,7 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
       appBar: AppBar(
         title: const Text(
           'Submit Aid Request',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -295,6 +295,7 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
               ),
             ),
             const SizedBox(height: 20),
+            const Divider(),
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -302,7 +303,7 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 0),
             Expanded(
               child: _submittedRequests.isEmpty
                   ? const Center(child: Text('No current requests for help.'))
