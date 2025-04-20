@@ -27,25 +27,20 @@ class TeamWidget extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 25),
                 ContactItem(
                   label: 'Casey Nguyen',
                   value: 'Frontend / Backend / Management',
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 25),
                 ContactItem(
                   label: 'Kevin',
                   value: 'Backend / Planner',
                 ),
-                SizedBox(height: 10),
+                SizedBox(height: 25),
                 ContactItem(
                   label: 'Andy',
                   value: 'Frontend',
-                ),
-                SizedBox(height: 10),
-                ContactItem(
-                  label: 'Sawyer',
-                  value: 'Nothing',
                 ),
               ],
             ),

@@ -32,19 +32,14 @@ class SocialWidget extends StatelessWidget {
                   label: 'Instagram',
                   value: '@CrowdsourcedDisasterRelief',
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 40),
                 ContactItem(
                   label: 'X',
                   value: '@CrowdsourcedDisasterRelief',
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 40),
                 ContactItem(
                   label: 'Facebook',
-                  value: '@CrowdsourcedDisasterRelief',
-                ),
-                SizedBox(height: 20),
-                ContactItem(
-                  label: 'Tiktok',
                   value: '@CrowdsourcedDisasterRelief',
                 ),
               ],
