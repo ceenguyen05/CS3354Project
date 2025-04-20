@@ -141,7 +141,6 @@ make test
 - Casey Nguyen
 - Kevin Pulikkottil
 - Andy Jih
-- Sawyer Anderson
 
 ---
 
