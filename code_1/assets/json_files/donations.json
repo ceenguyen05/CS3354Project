@@ -7,17 +7,37 @@
   {
     "name": "Andy",
     "type": "Money",
-    "detail": "$500"
-  },
-  {
-    "name": "Sawyer",
-    "type": "Resource",
-    "detail": "100 gallons of gas"
+    "detail": "$1000"
   },
   {
     "name": "Kevin",
     "type": "Resource",
     "detail": "100 cases of water"
+  },
+  {
+    "name": "Ian",
+    "type": "Resource",
+    "detail": "100 gallons of gas"
+  },
+  {
+    "name": "Claudia",
+    "type": "Money",
+    "detail": "$20"
+  },
+  {
+    "name": "Erin",
+    "type": "Resource",
+    "detail": "100 Cupcakes"
+  },
+  {
+    "name": "Ranran Feng",
+    "type": "Money",
+    "detail": "$100"
+  },
+  {
+    "name": "Joey",
+    "type": "Resource",
+    "detail": "20 Mcdonalds Happy Meals"
   }
 ]
 
