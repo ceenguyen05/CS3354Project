@@ -168,7 +168,7 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
         ),
       ),
       body: Container(
-        padding: const EdgeInsets.fromLTRB(16, 100, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 75, 16, 16),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
