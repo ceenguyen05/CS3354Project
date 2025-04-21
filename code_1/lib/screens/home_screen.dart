@@ -16,6 +16,7 @@ import '../widgets/explanation.dart';
 import '../widgets/contact.dart'; 
 import '../widgets/social.dart'; 
 import '../widgets/team.dart';    
+import '../widgets/ai.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -121,6 +122,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 FadeTransition(
                   opacity: _fadeAnimation,
                   child: const ExplanationWidget(),
+                ),
+                 const SizedBox(height: 120),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: const AIWidget(),
                 ),
                 const SizedBox(height: 120),
                 // Updated Row with Social and Team Widgets wrapped in a Wrap widget

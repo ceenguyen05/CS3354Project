@@ -35,7 +35,7 @@ class TeamWidget extends StatelessWidget {
                 SizedBox(height: 25),
                 ContactItem(
                   label: 'Kevin',
-                  value: 'Backend / Planner',
+                  value: 'Backend / AI / Planner',
                 ),
                 SizedBox(height: 25),
                 ContactItem(
