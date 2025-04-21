@@ -60,7 +60,18 @@ serviceAccountKey.json
 
 Move this file into `code_1/backend`
 
-**Step 4: Running the Code**
+** Step 4: Rebuild Virtual Enviorment 
+
+run these commands in terminal : 
+
+rm -rf code_1/backend/venv
+python3 -m venv code_1/backend/venv
+source code_1/backend/venv/bin/activate
+pip install --upgrade pip
+pip install -r code_1/backend/requirements.txt 
+
+
+**Step 5: Running the Code**
 
 Now, run:
 
