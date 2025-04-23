@@ -6,7 +6,7 @@ services:
     # Builds and runs the FastAPI service
     build: .
     ports:
-      - "8000:8000"
+      - "8001:8001"
     # Mount the service account key file into the container
     volumes:
       - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro # Mount as read-only

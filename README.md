@@ -105,7 +105,7 @@ Now, run:
 make run-all # starts both the backend and frontend
 ```
 
-If you get error 48, run `lsof -i :8001` and then kill the listed processes via `kill -9 PID1 PID2` and then rerun. You should run this after every program run.
+If you get error 48, run `lsof -i :8001` and then kill the listed processes via `kill -9 PID1 PID2` and then rerun. Closing the app via the app window rather than the terminal should prevent this error from occurring.
 
 Uses `pytest` to validate:
 
@@ -129,12 +129,6 @@ make test
 
 - Firebase credentials are secured and excluded via `.gitignore`.
 - Placeholder user auth exists in frontend, backend integration pending.
-
-## Known Limitations
-
-- Frontend/backend not yet fully integrated.
-- Auth not implemented in backend.
-- Basic UI, full design coming in next iteration.
 
 ## Team
 
