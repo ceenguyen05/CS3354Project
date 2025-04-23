@@ -55,6 +55,38 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
   bool _locationMissingError = false;
   final List<Request> _submittedRequests = [];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingRequests();
+  }
+
+  void _loadExistingRequests() async {
+    try {
+      final existing = await RequestService.fetchCurrentRequests();
+      // Add this print statement to see the parsed data
+      print('--- Fetched Requests Data ---');
+      existing.forEach((req) {
+        print(req.toJson()); // Use toJson to see what the Request object holds
+      });
+      print('-----------------------------');
+
+      if (mounted) {
+        setState(() {
+          _submittedRequests.clear();
+          _submittedRequests.addAll(existing);
+        });
+      }
+    } catch (e) {
+      print('Error loading existing requests: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading requests: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _getLocation() async {
     final permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
@@ -67,7 +99,7 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
     });
   }
 
-  void _submitRequest() {
+  Future<void> _submitRequest() async {
     setState(() {
       _locationMissingError = _location == null;
     });
@@ -83,20 +115,33 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
         longitude: _location!.longitude,
       );
 
-      submitRequest(request);
+      try {
+        await RequestService.submitRequest(request);
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Request submitted.')));
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Request submitted.')));
+        }
 
-      setState(() {
-        _submittedRequests.add(request);
-        _formKey.currentState!.reset();
-        _location = null;
-        _aidType = 'Medical';
-        _description = '';
-        _name = '';
-        _locationMissingError = false;
-      });
+        _loadExistingRequests();
+
+        if (mounted) {
+          setState(() {
+            _formKey.currentState!.reset();
+            _location = null;
+            _aidType = 'Medical';
+            _description = '';
+            _name = '';
+            _locationMissingError = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to submit request: $e')),
+          );
+        }
+      }
     }
   }
 
@@ -111,16 +156,6 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
       default:
         return const Icon(Icons.help_outline);
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    fetchCurrentRequests().then((requests) {
-      setState(() {
-        _submittedRequests.addAll(requests);
-      });
-    });
   }
 
   InputDecoration _inputDecoration(String label) {
@@ -337,7 +372,7 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
     );
   }
 
-    void _showMapDialog() {
+  void _showMapDialog() {
     showDialog(
       context: context,
       builder:

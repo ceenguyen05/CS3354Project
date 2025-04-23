@@ -1,24 +1,28 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
-import '../models/resource.dart';
+// lib/services/resource_service.dart
 
-Future<List<Resource>> fetchResources() async {
-  try {
-    final String response = await rootBundle.loadString('assets/json_files/resources.json');
-    final data = jsonDecode(response);
-    
-    // ignore: avoid_print
-    print("Loaded data: $data");  // Log the raw JSON data
-    
-    return (data as List).map((resource) => Resource.fromJson(resource)).toList();
-  } catch (e) {
-    // ignore: avoid_print
-    print("Error loading data: $e");  // Log any errors
-    rethrow;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../models/resource.dart';
+import 'api.dart';
+
+class ResourceService {
+  static Future<List<Resource>> fetchResources() async {
+    final resp = await http.get(Uri.parse('$apiUrl/resources'));
+    if (resp.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(resp.body);
+      return data.map((e) => Resource.fromJson(e)).toList();
+    }
+    throw Exception('Failed to load resources');
+  }
+
+  static Future<void> addResource(Resource resource) async {
+    final resp = await http.post(
+      Uri.parse('$apiUrl/resources'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(resource.toJson()),
+    );
+    if (resp.statusCode != 200) {
+      throw Exception('Failed to add resource');
+    }
   }
 }
-
-
-
-
-

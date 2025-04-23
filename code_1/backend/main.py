@@ -1,141 +1,172 @@
-# 1_code/main.py
-
 import os
 import sys
 
-# Ensure the current directory is in sys.path for module discovery.
+# Allow importing matching_ai from this folder
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
-# Import the necessary functions from matching_ai.
-from matching_ai import extract_features_request, get_best_matches  # production matching
-# We will use get_best_matches_debug for the debug endpoint.
-import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from firebase_admin import credentials, firestore
+
 import firebase_admin
+from firebase_admin import credentials, firestore, auth as fb_auth
 
-# Firebase Admin SDK Setup
-try:
-    # Set the service account key path via environment variable, default to "1_code/serviceAccountKey.json".
-    cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "1_code/serviceAccountKey.json")
-    if not os.path.exists(cred_path):
-        raise FileNotFoundError(f"Service account key file not found at: {cred_path}. Set GOOGLE_APPLICATION_CREDENTIALS.")
-    
-    if not firebase_admin._apps:
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred)
-        print("Firebase Admin SDK initialized successfully.")
-    else:
-        print("Firebase Admin SDK already initialized.")
-except FileNotFoundError as fnf_error:
-    print(f"Error: {fnf_error}")
+from matching_ai import extract_features_request, get_best_matches, get_best_matches_debug
+
+from pydantic import BaseModel
+from typing import Optional
+
+# ————— Firebase Admin Initialization —————
+cred_path = os.getenv(
+    "GOOGLE_APPLICATION_CREDENTIALS",
+    os.path.join(current_dir, "serviceAccountKey.json")
+)
+if not os.path.exists(cred_path):
+    print(f"Service account key not found at {cred_path}")
     exit(1)
-except Exception as e:
-    print(f"Unexpected error during Firebase initialization: {e}")
-    exit(1)
+if not firebase_admin._apps:
+    cred = credentials.Certificate(cred_path)
+    firebase_admin.initialize_app(cred)
 
-# Get Firestore client.
-try:
-    db = firestore.client()
-    print("Firestore client obtained successfully.")
-except Exception as e:
-    print(f"Error obtaining Firestore client: {e}")
-    exit(1)
+db = firestore.client()
 
+# ————— Collection References —————
+volunteers_ref = db.collection("volunteers")
+requests_ref   = db.collection("requests")
+resources_ref  = db.collection("resources")
+donations_ref  = db.collection("donations")
+users_ref      = db.collection("users")
 
-# FastAPI Application Setup
-app = FastAPI(title="Crowdsourced Disaster Relief API (Firebase)")
-
+# ————— FastAPI App Setup —————
+app = FastAPI(title="Crowdsourced Disaster Relief API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
-# Firestore collection references.
-volunteers_ref = db.collection('volunteers')
-requests_ref = db.collection('requests')
+# ————— Pydantic Models —————
+class ResourceIn(BaseModel):
+    name: str
+    quantity: int
+    location: str
 
-# API Endpoints
+class RequestIn(BaseModel):
+    name: str
+    type: str
+    description: str
+    latitude: float
+    longitude: float
+
+class DonationIn(BaseModel):
+    donor_name: str
+    donation_type: str
+    detail: str
+
+class SignUpIn(BaseModel):
+    email: str
+    password: str
+    display_name: Optional[str] = None
+
+class SignInIn(BaseModel):
+    id_token: str
+
+# ————— Health Check —————
 @app.get("/")
-def read_root():
-    return {"message": "Welcome to the Crowdsourced Disaster Relief API (Firebase)"}
+def root():
+    return {"status": "API up"}
 
+# ————— Resources —————
+@app.get("/resources")
+def list_resources():
+    return [doc.to_dict() for doc in resources_ref.stream()]
+
+@app.post("/resources")
+def create_resource(r: ResourceIn):
+    doc_ref = resources_ref.add(r.dict())
+    return {"resource_id": doc_ref[1].id}
+
+# ————— Requests & Matching —————
+@app.get("/requests")
+def list_requests():
+    return [doc.to_dict() for doc in requests_ref.stream()]
+
+@app.post("/requests")
+def create_request(req: RequestIn):
+    # save
+    doc_ref = requests_ref.add(req.dict())
+    req_id = doc_ref[1].id
+
+    # load + match
+    req_data = {**req.dict(), "id": req_id}
+    vols = [d.to_dict() for d in volunteers_ref.stream()]
+    features = extract_features_request(req_data)
+    matches = get_best_matches(features, vols)
+    return {"request_id": req_id, "matches": matches}
+
+# ————— Donations —————
+@app.get("/donations")
+def list_donations():
+    return [doc.to_dict() for doc in donations_ref.stream()]
+
+@app.post("/donations")
+def create_donation(d: DonationIn):
+    doc_ref = donations_ref.add(d.dict())
+    return {"donation_id": doc_ref[1].id}
+
+# ————— Authentication —————
+@app.post("/signup")
+def signup(u: SignUpIn):
+    try:
+        user = fb_auth.create_user(
+            email=u.email,
+            password=u.password,
+            display_name=u.display_name
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    users_ref.document(user.uid).set({
+        "email": u.email,
+        "display_name": u.display_name
+    })
+    return {"uid": user.uid}
+
+@app.post("/signin")
+def signin(t: SignInIn):
+    try:
+        decoded = fb_auth.verify_id_token(t.id_token)
+        uid = decoded["uid"]
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    profile = users_ref.document(uid).get().to_dict()
+    if profile is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"uid": uid, "profile": profile}
+
+# ————— Volunteer Matching —————
 @app.get("/match/{request_id}")
-def match_volunteers_firebase(request_id: str):
-    """
-    Production endpoint: returns matched volunteers for the given request_id.
-    """
-    try:
-        request_doc = requests_ref.document(request_id).get()
-        if not request_doc.exists:
-            raise HTTPException(status_code=404, detail="Request not found")
-        req_data = request_doc.to_dict()
-        req_data['id'] = request_doc.id
-    except Exception as e:
-        print(f"Error fetching request {request_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching request data: {e}")
+def match_volunteers(request_id: str):
+    req_doc = requests_ref.document(request_id).get()
+    if not req_doc.exists:
+        raise HTTPException(status_code=404, detail="Request not found")
+    req_data = req_doc.to_dict(); req_data["id"] = request_id
 
-    try:
-        volunteer_docs = volunteers_ref.stream()
-        all_volunteers = []
-        for doc in volunteer_docs:
-            v_data = doc.to_dict()
-            v_data['id'] = doc.id
-            all_volunteers.append(v_data)
-        if not all_volunteers:
-            raise HTTPException(status_code=404, detail="No volunteers available")
-    except Exception as e:
-        print(f"Error fetching volunteers: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching volunteer data: {e}")
-
-    # Extract features from the request.
-    request_features = extract_features_request(req_data)
-    # Perform AI matching using KNN.
-    matches = get_best_matches(request_features, all_volunteers, k=3)
-    return {"matched_volunteers": matches}
+    vols = [d.to_dict() for d in volunteers_ref.stream()]
+    features = extract_features_request(req_data)
+    matches = get_best_matches(features, vols)
+    return {"matches": matches}
 
 @app.get("/debug-match/{request_id}")
 def debug_match(request_id: str):
-    """
-    Debug endpoint: returns detailed matching process information.
-    """
-    try:
-        request_doc = requests_ref.document(request_id).get()
-        if not request_doc.exists:
-            raise HTTPException(status_code=404, detail="Request not found")
-        req_data = request_doc.to_dict()
-        req_data['id'] = request_doc.id
-    except Exception as e:
-        print(f"Error fetching request {request_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching request data: {e}")
+    req_doc = requests_ref.document(request_id).get()
+    if not req_doc.exists:
+        raise HTTPException(status_code=404, detail="Request not found")
+    req_data = req_doc.to_dict(); req_data["id"] = request_id
 
-    try:
-        volunteer_docs = volunteers_ref.stream()
-        all_volunteers = []
-        for doc in volunteer_docs:
-            v_data = doc.to_dict()
-            v_data['id'] = doc.id
-            all_volunteers.append(v_data)
-        if not all_volunteers:
-            raise HTTPException(status_code=404, detail="No volunteers available")
-    except Exception as e:
-        print(f"Error fetching volunteers: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching volunteer data: {e}")
-
-    # Extract the request feature vector.
-    request_features = extract_features_request(req_data)
-    
-    # Import the debug function from matching_ai.
-    try:
-        from matching_ai import get_best_matches_debug
-    except ImportError:
-        raise HTTPException(status_code=500, detail="Debug matching function not found in matching_ai.py")
-    
-    debug_data = get_best_matches_debug(request_features, all_volunteers, k=3)
-    return debug_data
+    vols = [d.to_dict() for d in volunteers_ref.stream()]
+    features = extract_features_request(req_data)
+    vec, matches = get_best_matches_debug(features, vols)
+    return {"features": vec.tolist(), "matches": matches}

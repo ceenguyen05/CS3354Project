@@ -7,25 +7,31 @@ class Donation {
   final String name;
   final String type;
   final String detail;
+  final String? itemName; // Changed from String to String?
 
   Donation({
     required this.name,
     required this.type,
     required this.detail,
+    this.itemName,
   });
+  
 
-  factory Donation.fromJson(Map<String, dynamic> json) {
-    return Donation(
-      name: json['name'],
-      type: json['type'],
-      detail: json['detail'],
-    );
-  }
+  /// Deserialize a Donation from JSON.
+  factory Donation.fromJson(Map<String, dynamic> json) => Donation(
+    name: json['donor_name'] as String? ?? 'Unknown',
+    type: json['donation_type'] as String? ?? 'Unknown',
+    detail: json['detail'] as String? ?? '',
+    itemName: json['item_name'] as String?,
+  );
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'type': type,
+        'donor_name': name, // To this key
+        'donation_type': type, // To this key
         'detail': detail,
+        // 'itemName': itemName, // Consider if this field is needed by the backend
+                                // If not, you might remove it from here too.
+                                // If it IS needed, ensure the backend expects 'itemName'.
       };
 }
 

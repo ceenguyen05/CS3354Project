@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app
 
 # expose port 8000 for fastapi
-EXPOSE 8000
+EXPOSE 8001
 
 # command to start the fastapi app when the container runs
 # uses 0.0.0.0 to be accessible externally

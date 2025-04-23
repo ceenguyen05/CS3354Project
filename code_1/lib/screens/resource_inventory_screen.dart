@@ -7,7 +7,7 @@
 import 'package:flutter/material.dart';
 import '../models/resource.dart';
 // ignore: library_prefixes
-import '../services/resource_service.dart' as ResourceService;
+import '../services/resource_service.dart';
 
 class ResourceInventoryScreen extends StatefulWidget {
   const ResourceInventoryScreen({super.key});
@@ -18,7 +18,7 @@ class ResourceInventoryScreen extends StatefulWidget {
 }
 
 class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
-  late Future<List<Resource>> resources;
+  late Future<List<Resource>> _resourcesFuture;
   bool _showLowInventoryOnly = false;
   String? _sortOption;
   final TextEditingController _searchController = TextEditingController();
@@ -43,7 +43,7 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
   @override
   void initState() {
     super.initState();
-    resources = ResourceService.fetchResources();
+    _resourcesFuture = ResourceService.fetchResources();
   }
 
   @override
@@ -78,7 +78,7 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
           ),
         ),
         body: FutureBuilder<List<Resource>>(
-          future: resources,
+          future: _resourcesFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -311,20 +311,42 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async { // Make async
                 if (name.isNotEmpty && location.isNotEmpty && quantity > 0) {
-                  setState(() {
-                    resources = resources.then((list) {
-                      return [
-                        ...list,
-                        Resource(name: name, quantity: quantity, location: location),
-                      ];
+                  final newResource = Resource(
+                    name: name,
+                    quantity: quantity,
+                    location: location,
+                  );
+                  try {
+                    // Call the service to add the resource
+                    await ResourceService.addResource(newResource);
+
+                    // Close the dialog
+                    // ignore: use_build_context_synchronously
+                    Navigator.of(context).pop();
+
+                    // Refresh the list by refetching
+                    setState(() {
+                      _resourcesFuture = ResourceService.fetchResources();
                     });
-                  });
-                  Navigator.of(context).pop();
+
+                    // Show success message
+                    // ignore: use_build_context_synchronously
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Resource added successfully!')),
+                    );
+
+                  } catch (e) {
+                     // Show error message
+                     // ignore: use_build_context_synchronously
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       SnackBar(content: Text('Failed to add resource: $e')),
+                     );
+                  }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill all fields.')),
+                    const SnackBar(content: Text('Please fill all fields correctly.')),
                   );
                 }
               },

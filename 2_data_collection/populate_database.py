@@ -95,14 +95,62 @@ def populate():
             {'name': 'George', 'skills': 'Communication', 'location': 'Dallas, TX', 'availability': 'available'},
         ]
 
-        # Define sample requests with an additional 'urgency' field and predefined IDs.
+        # Define sample requests with all required fields
         requests_data = {
-            '101': {'type': 'Medical', 'location': 'Houston, TX', 'urgency': 'high'},
-            '102': {'type': 'Food Logistics', 'location': 'Austin, TX', 'urgency': 'medium'},
-            '103': {'type': 'Rescue', 'location': 'Dallas, TX', 'urgency': 'high'},
-            '104': {'type': 'Shelter Management', 'location': 'San Antonio, TX', 'urgency': 'medium'},
-            '105': {'type': 'Medical', 'location': 'Dallas, TX', 'urgency': 'high'},
-            '106': {'type': 'Transportation', 'location': 'Houston, TX', 'urgency': 'low'},
+            '101': {
+                'name': 'Urgent Medical Aid Needed',
+                'type': 'Medical',
+                'description': 'Requires immediate medical attention near downtown.',
+                'latitude': 29.7604,  # Example Houston Lat
+                'longitude': -95.3698, # Example Houston Lon
+                'location': 'Houston, TX', # Keep original location string if needed elsewhere
+                'urgency': 'high'
+            },
+            '102': {
+                'name': 'Food Distribution Point',
+                'type': 'Food Logistics',
+                'description': 'Setting up food distribution, need volunteers.',
+                'latitude': 30.2672,  # Example Austin Lat
+                'longitude': -97.7431, # Example Austin Lon
+                'location': 'Austin, TX',
+                'urgency': 'medium'
+            },
+            '103': {
+                'name': 'Search and Rescue Op',
+                'type': 'Rescue',
+                'description': 'Search operation underway in flooded area.',
+                'latitude': 32.7767,  # Example Dallas Lat
+                'longitude': -96.7970, # Example Dallas Lon
+                'location': 'Dallas, TX',
+                'urgency': 'high'
+            },
+            '104': {
+                'name': 'Shelter Support Required',
+                'type': 'Shelter Management',
+                'description': 'Need help managing temporary shelter.',
+                'latitude': 29.4241,  # Example San Antonio Lat
+                'longitude': -98.4936, # Example San Antonio Lon
+                'location': 'San Antonio, TX',
+                'urgency': 'medium'
+            },
+            '105': {
+                'name': 'Medical Supplies Request',
+                'type': 'Medical',
+                'description': 'Requesting specific medical supplies.',
+                'latitude': 32.7767,  # Example Dallas Lat
+                'longitude': -96.7970, # Example Dallas Lon
+                'location': 'Dallas, TX',
+                'urgency': 'high'
+            },
+            '106': {
+                'name': 'Transport for Evacuees',
+                'type': 'Transportation',
+                'description': 'Need drivers for evacuee transport.',
+                'latitude': 29.7604,  # Example Houston Lat
+                'longitude': -95.3698, # Example Houston Lon
+                'location': 'Houston, TX',
+                'urgency': 'low'
+            },
         }
 
         # Use batch writes for efficient insertion

@@ -5,15 +5,24 @@
 class User {
   final String email;
   final String password;
+  final String displayName;
 
-  User({required this.email, required this.password});
+  User({
+    required this.email,
+    required this.password,
+    this.displayName = '',
+  });
 
   // Convert User to JSON format
   Map<String, dynamic> toJson() {
-    return {
+    final data = {
       'email': email,
       'password': password,
     };
+    if (displayName.isNotEmpty) {
+      data['display_name'] = displayName;
+    }
+    return data;
   }
 
   // Convert JSON to User
@@ -21,6 +30,7 @@ class User {
     return User(
       email: json['email'],
       password: json['password'],
+      displayName: json['display_name'] ?? '',
     );
   }
 }

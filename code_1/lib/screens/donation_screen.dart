@@ -16,7 +16,7 @@ class DonationScreen extends StatefulWidget {
 
 class _DonationScreenState extends State<DonationScreen> {
   final _formKey = GlobalKey<FormState>();
-  final List<Donation> _donations = [];
+  List<Donation> _donations = [];
   final TextEditingController _detailController = TextEditingController();
 
   String _name = '';
@@ -33,7 +33,9 @@ class _DonationScreenState extends State<DonationScreen> {
   void initState() {
     super.initState();
     _loadDonations();
-    _detailController.text = '\$';
+    if (_type == 'Money') {
+      _detailController.text = '\$';
+    }
   }
 
   @override
@@ -43,30 +45,61 @@ class _DonationScreenState extends State<DonationScreen> {
   }
 
   void _loadDonations() async {
-    final donations = await fetchDonations();
-    setState(() {
-      _donations.addAll(donations);
-    });
+    try {
+      final donations = await DonationService.fetchDonations();
+      if (mounted) {
+        setState(() {
+          _donations = donations;
+        });
+      }
+    } catch (e) {
+      print('Error loading donations: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading previous donations: $e')),
+        );
+      }
+    }
   }
 
-  void _submitDonation() {
+  void _submitDonation() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
       _detail = _detailController.text;
 
-      final newDonation = Donation(name: _name, type: _type, detail: _detail);
-
-      setState(() {
-        _donations.add(newDonation);
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Thanks $_name for donating $_detail ($_type)')),
+      final newDonation = Donation(
+        name: _name,
+        type: _type,
+        detail: _detail,
       );
 
-      _formKey.currentState!.reset();
-      _type = 'Money';
-      _detailController.text = '\$';
+      try {
+        await DonationService.submitDonation(newDonation);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Thanks $_name for donating $_detail ($_type)')),
+          );
+        }
+
+        _loadDonations();
+
+        if (mounted) {
+          setState(() {
+            _formKey.currentState!.reset();
+            _type = 'Money';
+            _detailController.text = '\$';
+            _name = '';
+          });
+        }
+
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to submit donation: $e')),
+          );
+        }
+      }
     }
   }
 
