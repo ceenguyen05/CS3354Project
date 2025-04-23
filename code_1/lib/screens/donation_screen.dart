@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import '../models/donation.dart';
 import '../services/donation_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DonationScreen extends StatefulWidget {
   const DonationScreen({super.key});
@@ -141,39 +142,50 @@ class _DonationScreenState extends State<DonationScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          validator: (value) =>
-                              value == null || value.isEmpty
-                                  ? "Enter your name"
-                                  : null,
+                          validator:
+                              (value) =>
+                                  value == null || value.isEmpty
+                                      ? "Enter your name"
+                                      : null,
                           onSaved: (value) => _name = value!,
                         ),
                         const SizedBox(height: 16),
-                        const Text("Donation Type", style: TextStyle(fontSize: 16)),
+                        const Text(
+                          "Donation Type",
+                          style: TextStyle(fontSize: 16),
+                        ),
                         const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: ['Money', 'Resource'].map((type) {
-                            final isSelected = _type == type;
-                            return Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 6),
-                                child: ChoiceChip(
-                                  label: Center(child: Text(type)),
-                                  selected: isSelected,
-                                  onSelected: (_) => _handleTypeChange(type),
-                                  selectedColor: const Color(0xFFB2EBF2),
-                                  backgroundColor: Colors.grey.shade200,
-                                  labelStyle: TextStyle(
-                                    color: isSelected ? Colors.black : Colors.black,
-                                    fontWeight: FontWeight.bold,
+                          children:
+                              ['Money', 'Resource'].map((type) {
+                                final isSelected = _type == type;
+                                return Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ),
+                                    child: ChoiceChip(
+                                      label: Center(child: Text(type)),
+                                      selected: isSelected,
+                                      onSelected:
+                                          (_) => _handleTypeChange(type),
+                                      selectedColor: const Color(0xFFB2EBF2),
+                                      backgroundColor: Colors.grey.shade200,
+                                      labelStyle: TextStyle(
+                                        color:
+                                            isSelected
+                                                ? Colors.black
+                                                : Colors.black,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                                );
+                              }).toList(),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -191,8 +203,10 @@ class _DonationScreenState extends State<DonationScreen> {
                               return "Enter a description";
                             }
                             if (_type == 'Money') {
-                              final numPart =
-                                  value.replaceAll(RegExp(r'[^\d.]'), '');
+                              final numPart = value.replaceAll(
+                                RegExp(r'[^\d.]'),
+                                '',
+                              );
                               if (numPart.isEmpty) {
                                 return "Please enter a valid amount";
                               }
@@ -203,7 +217,45 @@ class _DonationScreenState extends State<DonationScreen> {
                         const SizedBox(height: 20),
                         Center(
                           child: ElevatedButton(
-                            onPressed: _submitDonation,
+                            onPressed: () {
+                              if (_formKey.currentState!.validate()) {
+                                _formKey.currentState!.save();
+                                _detail = _detailController.text;
+
+                                final newDonation = Donation(
+                                  name: _name,
+                                  type: _type,
+                                  detail: _detail,
+                                );
+
+                                if (_type == 'Money') {
+                                  final stripeUrl = Uri.parse(
+                                    'https://buy.stripe.com/test_6oE6p01Rvedi8rmaEE',
+                                  );
+                                  launchUrl(
+                                    stripeUrl,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                } else {
+                                  setState(() {
+                                    _donations.add(newDonation);
+                                  });
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Thanks $_name for donating $_detail ($_type)',
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                _formKey.currentState!.reset();
+                                _type = 'Money';
+                                _detailController.text = '\$';
+                              }
+                            },
+
                             // ignore: sort_child_properties_last
                             child: const Text("Donate"),
                             style: ElevatedButton.styleFrom(
@@ -234,40 +286,45 @@ class _DonationScreenState extends State<DonationScreen> {
                 ),
               ),
               Expanded(
-                child: _donations.isEmpty
-                    ? const Center(child: Text("No donations yet."))
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(top: 10),
-                        itemCount: _donations.length,
-                        itemBuilder: (context, index) {
-                          final d = _donations[index];
-                          Icon icon;
-                          if (d.type == 'Money') {
-                            icon = const Icon(Icons.attach_money,
-                                color: Colors.green);
-                          } else {
-                            icon = const Icon(Icons.inventory,
-                                color: Colors.amber);
-                          }
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
-                            child: ListTile(
-                              leading: icon,
-                              title: Text(
-                                "${d.name} donated ${d.detail}",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                child:
+                    _donations.isEmpty
+                        ? const Center(child: Text("No donations yet."))
+                        : ListView.builder(
+                          padding: const EdgeInsets.only(top: 10),
+                          itemCount: _donations.length,
+                          itemBuilder: (context, index) {
+                            final d = _donations[index];
+                            Icon icon;
+                            if (d.type == 'Money') {
+                              icon = const Icon(
+                                Icons.attach_money,
+                                color: Colors.green,
+                              );
+                            } else {
+                              icon = const Icon(
+                                Icons.inventory,
+                                color: Colors.amber,
+                              );
+                            }
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              subtitle: Text(d.type),
-                            ),
-                          );
-                        },
-                      ),
+                              elevation: 2,
+                              child: ListTile(
+                                leading: icon,
+                                title: Text(
+                                  "${d.name} donated ${d.detail}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Text(d.type),
+                              ),
+                            );
+                          },
+                        ),
               ),
             ],
           ),
@@ -276,4 +333,3 @@ class _DonationScreenState extends State<DonationScreen> {
     );
   }
 }
-
