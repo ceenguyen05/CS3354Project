@@ -126,13 +126,32 @@ def signup(u: SignUpIn):
             password=u.password,
             display_name=u.display_name
         )
+    # --- MODIFICATION START ---
+    except fb_auth.FirebaseAuthError as e: # Catch specific Firebase errors
+        # Provide a more informative detail based on the Firebase error code
+        error_detail = f"Firebase signup failed: {e.code}" # Keep it concise for UI
+        # Optionally add full message for backend log: f"Firebase signup failed: {e.code} - {e.message}"
+        print(f"FirebaseAuthError during signup for {u.email}: {e.code} - {e.message}") # Log the specific error
+        raise HTTPException(status_code=400, detail=error_detail)
+    except Exception as e: # Catch other unexpected errors
+        print(f"Unexpected error during signup for {u.email}: {e}") # Log unexpected errors
+        raise HTTPException(status_code=500, detail="An unexpected server error occurred during signup.")
+    # --- MODIFICATION END ---
+
+    # If create_user was successful, save additional info to Firestore
+    try:
+        users_ref.document(user.uid).set({
+            "email": u.email, # Store email
+            "display_name": u.display_name or "" # Store display name or empty string
+            # Add any other profile fields you want to store initially
+        })
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    users_ref.document(user.uid).set({
-        "email": u.email,
-        "display_name": u.display_name
-    })
-    return {"uid": user.uid}
+        # Log Firestore error, but maybe don't fail the whole signup?
+        # Or decide if this should also cause signup to fail.
+        print(f"Error saving user profile to Firestore for {user.uid}: {e}")
+        # Optionally raise HTTPException here if Firestore save is critical
+
+    return {"uid": user.uid} # Return UID on success
 
 @app.post("/signin")
 def signin(t: SignInIn):
