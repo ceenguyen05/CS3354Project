@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Disaster Relief Web App',
+      title: 'Disaster Relief Platform',
       theme: ThemeData(
         primarySwatch: Colors.indigo,
         fontFamily: 'ComicSans', 
