@@ -5,12 +5,18 @@ class ExplanationWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 600;
+
+    final double titleFontSize = isMobile ? 22 : 28;
+    final double bodyFontSize = isMobile ? 14 : 17;
+
     return Column(
       children: [
-        const Text(
+        Text(
           'How Crowdsourcing Works',
           style: TextStyle(
-            fontSize: 28,
+            fontSize: titleFontSize,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -30,12 +36,12 @@ class ExplanationWidget extends StatelessWidget {
               ),
             ],
           ),
-          child: const Text(
+          child: Text(
             'Crowdsourcing in disaster relief empowers individuals to both request and offer help in real-time. '
             'Those in need post requests for supplies or services, while volunteers and donors from nearby communities or across the globe respond. '
             'This decentralized system ensures faster response, better resource allocation, and community-driven action. '
             'By using technology to connect people directly, crowdsourcing enables quick, efficient, and compassionate relief.',
-            style: TextStyle(fontSize: 17, height: 1.6),
+            style: TextStyle(fontSize: bodyFontSize, height: 1.6),
             textAlign: TextAlign.justify,
           ),
         ),

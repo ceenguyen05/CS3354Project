@@ -6,40 +6,49 @@ class CustomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Column(
-        children: [
-          // Row with expanded space between logo and button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Logo on the left
-              SizedBox(
-                height: 80,
-                width: 150,
-                child: Image.asset('assets/logo.png'),
-              ),
+    return SafeArea(
+      bottom: false,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isMobile = constraints.maxWidth < 600;
+          final horizontalPadding = isMobile ? 8.0 : 24.0;
+          final buttonLabel =
+              isMobile ? 'Sign In' : 'Sign Up / Sign In'; // ✅ correct placement
 
-              // Use Spacer to push the signup button to the right
-              Expanded(
-                child: Container(),
-              ),
+          return Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: 16,
+            ),
+            child: Row(
+              children: [
+                // 1) Logo flush left:
+                SizedBox(
+                  height: isMobile ? 48 : 80,
+                  width: isMobile ? 100 : 150,
+                  child: Image.asset('assets/logo.png'),
+                ),
 
-              // Sign-up button
-              _HoverableSignInButton(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SignUpScreen(),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ],
+                // 2) Spacer to push button right
+                const Spacer(),
+
+                // 3) Sign-in button
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: _HoverableSignInButton(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                      );
+                    },
+                    label: buttonLabel,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -47,8 +56,13 @@ class CustomNavigationBar extends StatelessWidget {
 
 class _HoverableSignInButton extends StatefulWidget {
   final VoidCallback onTap;
-  // ignore: unused_element_parameter
-  const _HoverableSignInButton({required this.onTap, super.key});
+  final String label;
+
+  const _HoverableSignInButton({
+    required this.onTap,
+    required this.label,
+    super.key,
+  });
 
   @override
   State<_HoverableSignInButton> createState() => _HoverableSignInButtonState();
@@ -65,38 +79,42 @@ class _HoverableSignInButtonState extends State<_HoverableSignInButton> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(
-            color: _isHovered ? hoverColor : baseColor,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              if (_isHovered)
-                const BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 8,
-                  offset: Offset(0, 4),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: _isHovered ? hoverColor : baseColor,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                if (_isHovered)
+                  const BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
+                  ),
+              ],
+              border: Border.all(color: Colors.black12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.person, color: Colors.black),
+                const SizedBox(width: 8),
+                Text(
+                  widget.label, // ✅ must not be const
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black,
+                    letterSpacing: 1.0,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-            ],
-            border: Border.all(color: Colors.black12),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.person, color: Colors.black),
-              SizedBox(width: 8),
-              Text(
-                'Sign Up / Sign In',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black,
-                  letterSpacing: 1.0,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

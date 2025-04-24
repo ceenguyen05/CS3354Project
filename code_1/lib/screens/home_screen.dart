@@ -11,11 +11,12 @@ import 'request_posting_screen.dart';
 import 'package:code_1/navbar/nav_bar.dart';
 import '../widgets/intro.dart';
 import '../widgets/intro2.dart';
-import '../widgets/user_stories.dart'; 
-import '../widgets/explanation.dart'; 
-import '../widgets/contact.dart'; 
-import '../widgets/social.dart'; 
-import '../widgets/team.dart';    
+import '../widgets/user_stories.dart';
+import '../widgets/explanation.dart';
+import '../widgets/contact.dart';
+import '../widgets/social.dart';
+import '../widgets/team.dart';
+import '../widgets/ai.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -41,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       curve: Curves.easeIn,
     );
 
-    _fadeController.forward(); 
+    _fadeController.forward();
   }
 
   @override
@@ -82,11 +83,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       runSpacing: 18.0,
                       children: [
                         _animatedButton(
-                          label: 'See Available Resource Inventory',
+                          label: 'Available Resource Inventory',
                           page: const ResourceInventoryScreen(),
                         ),
                         _animatedButton(
-                          label: 'See Emergency Alerts',
+                          label: 'Emergency Alerts',
                           page: const EmergencyAlertsScreen(),
                         ),
                         _animatedButton(
@@ -101,17 +102,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 30),
                 FadeTransition(
                   opacity: _fadeAnimation,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Expanded(child: Intro()),   // Left side
-                      Expanded(child: Intro2()),  // Right side
-                    ],
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      if (constraints.maxWidth > 600) {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Expanded(child: Intro()),
+                            Expanded(child: Intro2()),
+                          ],
+                        );
+                      } else {
+                        return Column(
+                          children: const [
+                            Intro(),
+                            SizedBox(height: 16),
+                            Intro2(),
+                          ],
+                        );
+                      }
+                    },
                   ),
                 ),
+
                 const SizedBox(height: 120),
                 FadeTransition(
                   opacity: _fadeAnimation,
@@ -123,23 +140,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: const ExplanationWidget(),
                 ),
                 const SizedBox(height: 120),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: const AIWidget(),
+                ),
+                const SizedBox(height: 120),
                 // Updated Row with Social and Team Widgets wrapped in a Wrap widget
                 FadeTransition(
                   opacity: _fadeAnimation,
                   child: Wrap(
                     alignment: WrapAlignment.center,
-                    spacing: 22.0, // Space between widgets
-                    runSpacing: 22.0, // Space between rows
-                    children: [
-                      Flexible(
-                        child: SocialWidget(),  // Left Widget (SocialWidget)
-                      ),
-                      Flexible(
-                        child: ContactInfoWidget(),  // Middle Widget (ContactInfoWidget)
-                      ),
-                      Flexible(
-                        child: TeamWidget(),  // Right Widget (TeamWidget)
-                      ),
+                    spacing: 22.0,
+                    runSpacing: 22.0,
+                    children: const [
+                      SizedBox(width: 300, child: SocialWidget()),
+                      SizedBox(width: 300, child: ContactInfoWidget()),
+                      SizedBox(width: 300, child: TeamWidget()),
                     ],
                   ),
                 ),
@@ -152,30 +168,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _animatedButton({required String label, required Widget page}) {
-    return ElevatedButton(
-      onPressed: () {
-        Navigator.push(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => page,
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(
-                opacity: animation,
-                child: child,
-              );
-            },
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minWidth: 180,
+      ), // <-- force a sensible min
+      child: ElevatedButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => page,
+              transitionsBuilder:
+                  (_, animation, __, child) =>
+                      FadeTransition(opacity: animation, child: child),
+            ),
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(
+            vertical: 16,
+            horizontal: 20, // slightly tighter so long labels wrap nicely
           ),
-        );
-      },
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(
-          vertical: 20,
-          horizontal: 30,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          backgroundColor: const Color(0xFFEDE6F6),
+          foregroundColor: Colors.deepPurple,
         ),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 18),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 16),
+        ),
       ),
     );
   }
