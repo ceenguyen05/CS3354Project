@@ -66,9 +66,9 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
       final existing = await RequestService.fetchCurrentRequests();
       // Add this print statement to see the parsed data
       print('--- Fetched Requests Data ---');
-      existing.forEach((req) {
+      for (var req in existing) {
         print(req.toJson()); // Use toJson to see what the Request object holds
-      });
+      }
       print('-----------------------------');
 
       if (mounted) {
