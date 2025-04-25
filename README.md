@@ -81,7 +81,7 @@ A full-stack web application designed to facilitate disaster response efforts th
 
 **Step 2: Generate a Service Account Private Key**
 
-1. In the Firebase Console, click the ⚙️ **gear icon** next to **Project Overview** and choose **Project settings**.
+1. In the Firebase Console, click the **gear icon** next to **Project Overview** and choose **Project settings**.
 2. Go to the **Service accounts** tab.
 3. Make sure **Python** is selected under  **Admin SDK configuration snippet** **.**
 4. Click the blue **“Generate new private key”** button.
@@ -97,15 +97,19 @@ serviceAccountKey.json
 
 Move this file into `code_1/backend`
 
-**Step 4: Running the Code**
+**Step 4: Enabling Signin/Signup**
+
+1. Go to the Build tab and click Authentication
+2. Click on Email/Password for the sign-in provider and save your changes
+3. All user data will be in the Firebase console under the Authentication tab
+
+**Step 5: Running the Code**
 
 Now, run:
 
 ```bash
 make run-all # starts both the backend and frontend
 ```
-
-If you get error 48, run `lsof -i :8001` and then kill the listed processes via `kill -9 PID1 PID2` and then rerun. Closing the app via the app window rather than the terminal should prevent this error from occurring.
 
 Uses `pytest` to validate:
 

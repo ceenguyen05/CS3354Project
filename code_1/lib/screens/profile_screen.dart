@@ -147,9 +147,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
+    } catch (e, stackTrace) { // Catch everything
+        // ONLY PRINT - NO OTHER LOGIC
+        print("--- RAW CATCH BLOCK ---");
+        print("Caught Error Type: ${e.runtimeType}");
+        print("Caught Error: $e");
+        print("Caught StackTrace:\n$stackTrace");
+        print("--- END RAW CATCH BLOCK ---");
+        // DO NOT add ScaffoldMessenger or any other logic here for now
     }
-  }
-
+    // Ensure no other 'on Exception catch' or 'on FirebaseAuthException catch' blocks exist below this one.
+  } // End of _submit method
 
   @override
   Widget build(BuildContext context) {
