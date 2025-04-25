@@ -4,8 +4,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/user.dart' as app_user; // Use prefix to avoid name clash
 import 'api.dart'; // Ensure this import is present
-import 'package:flutter/foundation.dart'; // For debugPrint
 import 'package:firebase_auth/firebase_auth.dart'; // Firebase Auth User
+import 'package:flutter/foundation.dart' show debugPrint; // <-- REMOVE kIsWeb from here
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;

@@ -11,12 +11,14 @@ import 'request_posting_screen.dart';
 import 'package:code_1/navbar/nav_bar.dart';
 import '../widgets/intro.dart';
 import '../widgets/intro2.dart';
-import '../widgets/user_stories.dart'; 
-import '../widgets/explanation.dart'; 
-import '../widgets/contact.dart'; 
-import '../widgets/social.dart'; 
-import '../widgets/team.dart';    
+import '../widgets/user_stories.dart';
+import '../widgets/explanation.dart';
+import '../widgets/contact.dart';
+// import '../widgets/social.dart'; // REMOVE THIS LINE
+import '../widgets/team.dart';
 import '../widgets/ai.dart';
+import 'package:flutter/gestures.dart'; // Import for TapGestureRecognizer if launching URLs
+import 'package:url_launcher/url_launcher.dart'; // Import for launching URLs
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -132,20 +134,37 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 // Updated Row with Social and Team Widgets wrapped in a Wrap widget
                 FadeTransition(
                   opacity: _fadeAnimation,
-                  child: Wrap(
+                  child: Wrap( // The Wrap widget itself is correct
                     alignment: WrapAlignment.center,
                     spacing: 22.0, // Space between widgets
                     runSpacing: 22.0, // Space between rows
                     children: [
-                      Flexible(
-                        child: SocialWidget(),  // Left Widget (SocialWidget)
+                      // --- FIX START ---
+                      // Remove Flexible and create specific SocialWidgets
+                      // Example: Add multiple SocialWidgets for different platforms
+                      SocialWidget(
+                        icon: Icons.facebook, // Example icon
+                        tooltip: 'Facebook',
+                        onPressed: () {
+                          // Add action, e.g., launch URL
+                          // _launchURL('https://facebook.com');
+                          print('Facebook pressed');
+                        },
                       ),
-                      Flexible(
-                        child: ContactInfoWidget(),  // Middle Widget (ContactInfoWidget)
+                      SocialWidget(
+                        icon: Icons.camera_alt, // Example icon for Instagram
+                        tooltip: 'Instagram',
+                        onPressed: () {
+                           // _launchURL('https://instagram.com');
+                           print('Instagram pressed');
+                        },
                       ),
-                      Flexible(
-                        child: TeamWidget(),  // Right Widget (TeamWidget)
-                      ),
+                      // Add more SocialWidgets as needed...
+
+                      // Keep ContactInfoWidget and TeamWidget (remove Flexible)
+                      ContactInfoWidget(),  // Assuming this doesn't need Flexible
+                      TeamWidget(),         // Assuming this doesn't need Flexible
+                      // --- FIX END ---
                     ],
                   ),
                 ),
@@ -182,6 +201,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Text(
         label,
         style: const TextStyle(fontSize: 18),
+      ),
+    );
+  }
+}
+
+// Custom widget for social media icons
+class SocialWidget extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  const SocialWidget({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0), // Keep padding if needed
+      child: IconButton(
+        icon: Icon(icon, color: Colors.black, size: 30), // Adjusted size
+        tooltip: tooltip,
+        onPressed: onPressed,
       ),
     );
   }

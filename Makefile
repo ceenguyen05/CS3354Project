@@ -77,11 +77,14 @@ clean:
 
 # New target to run both backend and frontend
 run-all: setup populate-db
+	@echo "Checking for and stopping any existing process on port 8001..."
+	@-lsof -t -i :8001 | xargs -r kill -9 || true # Find PID on port 8001, kill it forcefully (-9), ignore errors
+	@sleep 1 # Give a moment for the port to release fully
 	@echo "Starting backend server..."
 	# Run the backend in the background so that the terminal is free for Flutter
 	( $(MAKE) run & )
 	@echo "Waiting for backend to be ready..."
-	@while ! nc -z 127.0.0.1 8001; do sleep 1; done
+	@while ! nc -z 127.0.0.1 8001; do sleep 1; done # Wait until port 8001 is listening
 	@echo "Backend is ready."
 	@echo "Starting Flutter frontend..."
 	# Change directory to code_1 and run the Flutter app

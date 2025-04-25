@@ -126,17 +126,22 @@ def signup(u: SignUpIn):
             password=u.password,
             display_name=u.display_name
         )
-    # --- MODIFICATION START ---
-    except fb_auth.FirebaseAuthError as e: # Catch specific Firebase errors
+    except fb_auth.AuthError as e: # Catch the base AuthError
         # Provide a more informative detail based on the Firebase error code
-        error_detail = f"Firebase signup failed: {e.code}" # Keep it concise for UI
-        # Optionally add full message for backend log: f"Firebase signup failed: {e.code} - {e.message}"
-        print(f"FirebaseAuthError during signup for {u.email}: {e.code} - {e.message}") # Log the specific error
-        raise HTTPException(status_code=400, detail=error_detail)
+        # Check if the error has a code attribute, otherwise use the general message
+        error_code = getattr(e, 'code', 'UNKNOWN_AUTH_ERROR')
+        error_detail = f"Firebase signup failed: {error_code}"
+        print(f"AuthError during signup for {u.email}: {e}") # Log the specific error
+        # Use specific status codes if possible, e.g., 409 for EMAIL_EXISTS
+        status_code = 400 # Default to Bad Request
+        if error_code == 'EMAIL_EXISTS':
+            status_code = 409 # Conflict
+        elif error_code == 'CONFIGURATION_NOT_FOUND':
+             status_code = 500 # Internal Server Error (config issue)
+        raise HTTPException(status_code=status_code, detail=error_detail)
     except Exception as e: # Catch other unexpected errors
         print(f"Unexpected error during signup for {u.email}: {e}") # Log unexpected errors
         raise HTTPException(status_code=500, detail="An unexpected server error occurred during signup.")
-    # --- MODIFICATION END ---
 
     # If create_user was successful, save additional info to Firestore
     try:
