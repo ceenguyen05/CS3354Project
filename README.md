@@ -69,7 +69,7 @@ A full-stack web application designed to facilitate disaster response efforts th
 - Donate: Monetary or material contributions.
 - Emergency Alerts: View disaster warnings.
 - Resource Inventory: Check resource availability.
-- Sign Up / Sign In: Placeholder UI for user authentication.
+- Sign Up / Sign In: UI for user authentication.
 
 ## Testing
 
