@@ -10,6 +10,8 @@ env/
 # Sensitive keys
 serviceAccountKey.json
 .env
+# Firebase configuration (contains API keys)
+code_1/lib/firebase_options.dart
 
 # Python egg files
 *.egg-info/
