@@ -108,7 +108,7 @@ Move this file into `code_1/backend`
 Now, run:
 
 ```bash
-make run-all # starts both the backend and frontend
+make run-all # starts both the backend and frontend (may take a while)
 ```
 
 Uses `pytest` to validate:
