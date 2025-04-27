@@ -36,13 +36,15 @@ Key Features:
 HOW TO RUN
 ## Testing
 
-**Step 1: Create a Firebase Project**
+**Step 1: Install flutter extension on VSCODE, go to flutter.com if need more info to download flutter SDK
+
+**Step 2: Create a Firebase Project**
 
 1. Go to the [Firebase Console](https://console.firebase.google.com/).
 2. Click **“Add project”** and follow the steps (you can skip Google Analytics if you prefer).
 3. Once created, your project dashboard will load. You’re now ready to generate a key.
 
-**Step 2: Generate a Service Account Private Key**
+**Step 3: Generate a Service Account Private Key**
 
 1. In the Firebase Console, click the ⚙️ **gear icon** next to **Project Overview** and choose **Project settings**.
 2. Go to the **Service accounts** tab.
@@ -50,7 +52,7 @@ HOW TO RUN
 4. Click the blue **“Generate new private key”** button.
 5. A **.json** key file will download to your system automatically.
 
-**Step 3: Rename and Move the Key File**
+**Step 4: Rename and Move the Key File**
 
 1. Rename the downloaded **.json** file to:
 
@@ -60,7 +62,7 @@ serviceAccountKey.json
 
 Move this file into `code_1/backend`
 
-** Step 4: Rebuild Virtual Enviorment 
+** Step 5: Rebuild Virtual Enviorment 
 
 run these commands in terminal : 
 
@@ -71,7 +73,7 @@ pip install --upgrade pip
 pip install -r code_1/backend/requirements.txt 
 
 
-**Step 5: Running the Code**
+**Step 6: Running the Code**
 
 Now, run:
 
@@ -79,7 +81,8 @@ Now, run:
 make run-all # starts both the backend and frontend
 ```
 
-If you get error 48, run `lsof -i :8001` and then kill the listed processes via `kill -9 PID1 PID2` and then rerun. You should run this after every program run.
+If you get error 48, run `lsof -i :8001` and then kill the listed processes via `kill -9 PID1 PID2` and then rerun. 
+You should run this after every program run.
 
 Uses `pytest` to validate:
 
