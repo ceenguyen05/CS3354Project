@@ -1,28 +1,24 @@
-// UI to update resource inventory
-// Creates a basics screen and imports the model and service darts for this specific function
-// Displays the current resources in your area
-// Will be soon updated for deliverable 2 to display all resources, even resources with 0 in your area
-// Will be able to integrate with updating data after a donation has been made for deliverable 2
-
 import 'package:flutter/material.dart';
 import '../models/resource.dart';
-// ignore: library_prefixes
-import '../services/resource_service.dart';
+// Keep the prefix if you prefer, or remove it and use ResourceService directly
+import '../services/resource_service.dart' as ResourceServicePrefix; // Renamed prefix for clarity
 
 class ResourceInventoryScreen extends StatefulWidget {
   const ResourceInventoryScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _ResourceInventoryScreenState createState() => _ResourceInventoryScreenState();
 }
 
 class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
-  late Future<List<Resource>> _resourcesFuture;
+  late Future<List<Resource>> resourcesFuture; // Rename to avoid conflict with variable name
   bool _showLowInventoryOnly = false;
   String? _sortOption;
   final TextEditingController _searchController = TextEditingController();
   String _searchTerm = '';
+
+  // Instantiate the service
+  final ResourceServicePrefix.ResourceService _resourceService = ResourceServicePrefix.ResourceService();
 
   final LinearGradient gradient = const LinearGradient(
     begin: Alignment.topLeft,
@@ -43,7 +39,16 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
   @override
   void initState() {
     super.initState();
-    _resourcesFuture = ResourceService.fetchResources();
+    // Call the load method using the service instance
+    _loadResources();
+  }
+
+  // Helper function to load/reload resources using the service instance
+  void _loadResources() {
+     setState(() {
+       // Use the instance and the correct method name
+       resourcesFuture = _resourceService.fetchResources();
+     });
   }
 
   @override
@@ -77,8 +82,9 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
             elevation: 0,
           ),
         ),
+        // Use the renamed future variable here
         body: FutureBuilder<List<Resource>>(
-          future: _resourcesFuture,
+          future: resourcesFuture, // Use the Future variable
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -88,25 +94,28 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
               return const Center(child: Text('No resources available.'));
             }
 
-            List<Resource> filtered = _showLowInventoryOnly
-                ? snapshot.data!.where((r) => r.quantity <= 50).toList()
-                : List.from(snapshot.data!);
+            List<Resource> filtered = [];
+            if (snapshot.hasData) {
+                 filtered = _showLowInventoryOnly
+                    ? snapshot.data!.where((r) => r.quantity <= 50).toList()
+                    : List.from(snapshot.data!);
 
-            if (_sortOption == 'City') {
-              filtered.sort((a, b) => a.location.compareTo(b.location));
-            } else if (_sortOption == 'Quantity') {
-              filtered.sort((a, b) => a.quantity.compareTo(b.quantity));
+                if (_sortOption == 'City') {
+                  filtered.sort((a, b) => a.location.compareTo(b.location));
+                } else if (_sortOption == 'Quantity') {
+                  filtered.sort((a, b) => a.quantity.compareTo(b.quantity));
+                }
+
+                if (_searchTerm.isNotEmpty) {
+                  filtered = filtered
+                      .where((r) =>
+                          r.name.toLowerCase().contains(_searchTerm) ||
+                          r.location.toLowerCase().contains(_searchTerm))
+                      .toList();
+                }
             }
-
-            if (_searchTerm.isNotEmpty) {
-              filtered = filtered
-                  .where((r) =>
-                      r.name.toLowerCase().contains(_searchTerm) ||
-                      r.location.toLowerCase().contains(_searchTerm))
-                  .toList();
-            }
-
-            return Column(
+            // ... Rest of build method using 'filtered' list ...
+             return Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -277,7 +286,7 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
 
   void _showAddResourceDialog() {
     String name = '';
-    String location = '';
+    // String location = ''; // Removed unused variable
     int quantity = 0;
 
     showDialog(
@@ -293,10 +302,10 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
                   decoration: const InputDecoration(labelText: 'Resource Name'),
                   onChanged: (val) => name = val,
                 ),
-                TextField(
-                  decoration: const InputDecoration(labelText: 'Location (City, ST)'),
-                  onChanged: (val) => location = val,
-                ),
+                // TextField( // Remove location field as backend doesn't use it for POST
+                //   decoration: const InputDecoration(labelText: 'Location (City, ST)'),
+                //   onChanged: (val) => location = val,
+                // ),
                 TextField(
                   decoration: const InputDecoration(labelText: 'Quantity'),
                   keyboardType: TextInputType.number,
@@ -312,41 +321,37 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
             ),
             ElevatedButton(
               onPressed: () async { // Make async
-                if (name.isNotEmpty && location.isNotEmpty && quantity > 0) {
-                  final newResource = Resource(
-                    name: name,
-                    quantity: quantity,
-                    location: location,
-                  );
+                // Use the variables or controller.text
+                if (name.isNotEmpty && quantity > 0 /* && location.isNotEmpty - removed location check */) {
+                  // Show loading indicator if desired
+                  // setState(() => _isLoading = true);
                   try {
                     // Call the service to add the resource
-                    await ResourceService.addResource(newResource);
+                    // We are not collecting description/category in the dialog currently
+                    // Pass null or default values if needed by the service method signature
+                    // Pass null for location as it's not collected and backend doesn't expect it on POST
+                    await _resourceService.addResource(name, quantity, null, null /*, location - not sent */);
 
-                    // Close the dialog
-                    // ignore: use_build_context_synchronously
+                    // If successful, close dialog and refresh list
                     Navigator.of(context).pop();
-
-                    // Refresh the list by refetching
-                    setState(() {
-                      _resourcesFuture = ResourceService.fetchResources();
-                    });
-
-                    // Show success message
-                    // ignore: use_build_context_synchronously
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Resource added successfully!')),
-                    );
-
+                    _loadResources(); // Refresh the resource list
+                     ScaffoldMessenger.of(context).showSnackBar(
+                       const SnackBar(content: Text('Resource added successfully!')),
+                     );
                   } catch (e) {
                      // Show error message
-                     // ignore: use_build_context_synchronously
+                     Navigator.of(context).pop(); // Close dialog even on error
                      ScaffoldMessenger.of(context).showSnackBar(
-                       SnackBar(content: Text('Failed to add resource: $e')),
+                       SnackBar(content: Text('Failed to add resource: ${e.toString().replaceFirst("Exception: ","")}')),
                      );
+                  } finally {
+                     // Hide loading indicator
+                     // if (mounted) setState(() => _isLoading = false);
                   }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill all fields correctly.')),
+                    // Updated error message as location is not required by backend
+                    const SnackBar(content: Text('Please enter a name and quantity.')),
                   );
                 }
               },

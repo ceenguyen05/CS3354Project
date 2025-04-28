@@ -7,3 +7,6 @@ requests
 geopy
 joblib
 pytest
+Flask
+Flask-Cors
+a2wsgi

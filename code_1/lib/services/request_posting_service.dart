@@ -1,44 +1,75 @@
-// lib/services/request_posting_service.dart
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/request.dart';
+import '../models/request.dart'; // Your Request model
 
-class RequestService {
-  // Adjust the URL to your actual backend endpoint
-  static const String _baseUrl = 'http://127.0.0.1:8001'; // Or your deployed URL
+class RequestPostingService {
+  // *** IMPORTANT: Replace with your actual backend URL and Port ***
+  final String _backendUrl = 'http://localhost:8001'; // CHANGE THIS
 
-  static Future<List<Request>> fetchCurrentRequests() async {
-    final response = await http.get(Uri.parse('$_baseUrl/requests'));
+  // Fetch requests from backend
+  Future<List<Request>> fetchCurrentRequests() async {
+    try {
+      // WARNING: Unauthenticated call. Add Auth header if backend secured.
+      final response = await http.get(Uri.parse('$_backendUrl/requests'));
 
-    if (response.statusCode == 200) {
-      // Print the raw response body BEFORE parsing
-      print('--- Raw JSON Response from /requests ---');
-      print(response.body);
-      print('---------------------------------------');
-
-      // Now parse the JSON
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => Request.fromJson(json)).toList();
-    } else {
-      print('Failed to load requests: ${response.statusCode}');
-      print('Response body: ${response.body}');
-      throw Exception('Failed to load requests');
+      if (response.statusCode == 200) {
+        List<dynamic> data = jsonDecode(response.body);
+        // Ensure backend response fields match Request.fromJson expectations
+        // Backend maps 'title' to 'name' in GET /requests response.
+        return data.map((json) => Request.fromJson(json)).toList();
+      } else {
+        print('Failed to load requests: ${response.statusCode}');
+        throw Exception('Failed to load requests');
+      }
+    } catch (e) {
+      print('Error fetching requests: $e');
+      throw Exception('Error fetching requests: $e');
     }
   }
 
-  static Future<void> submitRequest(Request request) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/requests'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(request.toJson()),
-    );
+  // Submit a request via backend
+  Future<Request> submitRequest(Request request) async {
+     try {
+      // WARNING: Unauthenticated call. Add Auth header if backend secured.
+      final headers = {'Content-Type': 'application/json'};
 
-    if (response.statusCode != 201 && response.statusCode != 200) { // Allow 200 or 201 for success
-      print('Failed to submit request: ${response.statusCode}');
-      print('Response body: ${response.body}');
-      throw Exception('Failed to submit request: ${response.body}');
+      // Convert Request object to JSON. Ensure toJson matches backend expectations.
+      // Backend POST /requests expects 'name', 'type', 'description', etc.
+      final body = jsonEncode(request.toJson());
+
+      print("Submitting request to backend: $body");
+
+      final response = await http.post(
+        Uri.parse('$_backendUrl/requests'),
+        headers: headers,
+        body: body,
+      );
+
+      print("Backend /requests POST response: ${response.statusCode}");
+      if (response.statusCode == 201) {
+        // Backend returns the created request (potentially with matches)
+        final responseData = jsonDecode(response.body);
+        print("Request created successfully: $responseData");
+        // Ensure backend response can be parsed by Request.fromJson
+        // Backend maps 'title' back to 'name' in the response.
+        return Request.fromJson(responseData);
+      } else {
+         print('Failed to submit request: ${response.statusCode} ${response.body}');
+        throw Exception('Failed to submit request');
+      }
+    } catch (e) {
+       print('Error submitting request: $e');
+      throw Exception('Error submitting request: $e');
     }
-     print('Request submitted successfully.'); // Add success log
   }
 }
+
+
+
+
+
+
+
+
+
+
