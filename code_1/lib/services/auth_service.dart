@@ -1,108 +1,134 @@
 // lib/services/auth_service.dart
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/user.dart' as app_user; // Use prefix to avoid name clash
-import 'api.dart'; // Ensure this import is present
-import 'package:firebase_auth/firebase_auth.dart'; // Firebase Auth User
-import 'package:flutter/foundation.dart' show debugPrint; // <-- REMOVE kIsWeb from here
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth; // Import with prefix
+import '../models/user.dart'; // Assuming you have a local User model for profile data
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final String _backendUrl = 'http://localhost:8001'; // CHANGE THIS
+  final firebase_auth.FirebaseAuth _firebaseAuth = firebase_auth.FirebaseAuth.instance; // Use prefix
 
-  /// Sign up a new user via backend API (creates both Firebase Auth + Firestore profile).
-  // Renamed from signUp to signUpWithBackend
-  Future<bool> signUpWithBackend(app_user.User user) async {
-    debugPrint('Attempting sign up via backend: ${user.email}');
-    final resp = await http.post(
-      Uri.parse('$apiUrl/signup'), // Use apiUrl
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(user.toJson()),
-    );
-    debugPrint('Backend Sign Up Status: ${resp.statusCode}');
-    return resp.statusCode == 200 || resp.statusCode == 201; // Allow Created
+  // Stream for auth state changes (Firebase User)
+  Stream<firebase_auth.User?> get authStateChanges => _firebaseAuth.authStateChanges(); // Use prefix
+
+  // Get current Firebase User
+  firebase_auth.User? getCurrentUser() { // Use prefix
+    return _firebaseAuth.currentUser;
   }
 
-  /// Sign in by verifying a Firebase ID token via backend; returns the user profile.
-  Future<Map<String, dynamic>?> signInWithToken(String idToken) async {
-    debugPrint('Attempting sign in via backend with token');
-    final resp = await http.post(
-      Uri.parse('$apiUrl/signin'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'id_token': idToken}),
-    );
-    debugPrint('Backend Sign In (Token) Status: ${resp.statusCode}');
-    if (resp.statusCode == 200) {
-      return jsonDecode(resp.body) as Map<String, dynamic>;
-    }
-    return null;
-  }
-
-  /// Sign in using email/password via backend
-  Future<bool> signInWithEmailBackend({ // Renamed for clarity
-    required String email,
-    required String password,
-  }) async {
-    debugPrint('Attempting sign in via backend with email: $email');
-    final resp = await http.post(
-      Uri.parse('$apiUrl/signin'), // Use apiUrl
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
-     debugPrint('Backend Sign In (Email) Status: ${resp.statusCode}');
-    return resp.statusCode == 200;
-  }
-
-  /// Sign up directly using Firebase Authentication
-  // Kept name as signUp for direct Firebase interaction
-  Future<User?> signUp(String email, String password) async {
-    debugPrint('Attempting direct Firebase sign up with email: $email'); // Log attempt
+  // Sign Up (using backend)
+  Future<User> signUp(String email, String password, String name, String userType) async {
+    final url = Uri.parse('$_backendUrl/signup'); // Corrected endpoint
     try {
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+          'name': name,
+          'userType': userType,
+        }),
       );
-      debugPrint('Direct Firebase sign up successful: ${result.user?.uid}'); // Log success
-      // Optionally: Call backend here to create user profile in Firestore if needed
-      // await createUserProfileInFirestore(result.user);
-      return result.user;
-    } on FirebaseAuthException catch (e) {
-      debugPrint('FirebaseAuthException during sign up: ${e.code} - ${e.message}');
-      // Rethrow or handle specific errors (e.g., display message)
-      throw Exception('Sign up failed: ${e.message}'); // Propagate error
+
+      if (response.statusCode == 201 || response.statusCode == 200) { // Check for success codes
+        final responseData = jsonDecode(response.body);
+        print('Signup Response Body: $responseData'); // Log the response
+
+        // Ensure responseData contains necessary fields before creating User
+        if (responseData['uid'] != null) {
+           // Correctly create User object from response data
+           // Assumes User constructor is: User({required String uid, required String email, String? name, String? userType})
+           return User(
+             uid: responseData['uid'],         // Use uid from response
+             email: responseData['email'] ?? email, // Use email from response or input
+             name: responseData['name'],        // Use name from response
+             userType: responseData['userType'] // Use userType from response
+             // DO NOT pass password here
+           );
+        } else {
+           throw Exception('Signup response missing UID.');
+        }
+      } else {
+        // Attempt to parse error message from backend
+        String errorMessage = 'Failed to sign up';
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData['message'] != null) {
+            errorMessage = errorData['message'];
+          } else if (errorData['error'] != null) {
+             errorMessage = errorData['error'];
+          }
+        } catch (_) {
+          // Ignore parsing error, use default message
+        }
+         print('Signup failed: ${response.statusCode} - ${response.body}');
+        throw Exception(errorMessage);
+      }
     } catch (e) {
-      debugPrint('Generic error during direct Firebase sign up: $e'); // Log other errors
-       throw Exception('An unknown error occurred during sign up.'); // Propagate error
+      print('Signup network or parsing error: $e');
+      // Rethrow or handle specific exceptions
+      throw Exception('An error occurred during sign up: ${e.toString()}');
     }
   }
 
-   /// Sign in directly using Firebase Authentication
-  Future<User?> signInWithEmail(String email, String password) async {
-    debugPrint('Attempting direct Firebase sign in with email: $email');
-    try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      debugPrint('Direct Firebase sign in successful: ${result.user?.uid}');
-      // Optionally: Fetch user profile from Firestore/backend after successful sign in
-      // final userProfile = await fetchUserProfileFromBackend(result.user?.uid);
-      return result.user;
-    } on FirebaseAuthException catch (e) {
-      debugPrint('FirebaseAuthException during sign in: ${e.code} - ${e.message}');
-      throw Exception('Sign in failed: ${e.message}'); // Propagate error
-    } catch (e) {
-      debugPrint('Generic error during direct Firebase sign in: $e');
-      throw Exception('An unknown error occurred during sign in.'); // Propagate error
-    }
+  // Sign In (using backend)
+  Future<User> signIn(String email, String password) async {
+     final url = Uri.parse('$_backendUrl/signin'); // Corrected endpoint
+     try {
+        final response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email, 'password': password}),
+        );
+
+         if (response.statusCode == 200) {
+            final responseData = jsonDecode(response.body);
+             print('Signin Response Body: $responseData'); // Log the response
+             // Ensure responseData contains necessary fields
+             if (responseData['uid'] != null) {
+                // Correctly create User object from response data
+                // Assumes User constructor is: User({required String uid, required String email, String? name, String? userType})
+                return User(
+                  uid: responseData['uid'],         // Use uid from response
+                  email: responseData['email'] ?? email, // Use email from response or input
+                  name: responseData['name'],        // Use name from response
+                  userType: responseData['userType'] // Use userType from response
+                  // DO NOT pass password here
+                );
+             } else {
+                throw Exception('Signin response missing UID.');
+             }
+         } else {
+             // Attempt to parse error message
+             String errorMessage = 'Failed to sign in';
+             try {
+               final errorData = jsonDecode(response.body);
+               if (errorData['message'] != null) {
+                 errorMessage = errorData['message'];
+               } else if (errorData['error'] != null) {
+                  errorMessage = errorData['error'];
+               }
+             } catch (_) {}
+              print('Signin failed: ${response.statusCode} - ${response.body}');
+             throw Exception(errorMessage);
+         }
+     } catch (e) {
+       print('Signin network or parsing error: $e');
+       throw Exception('An error occurred during sign in: ${e.toString()}');
+     }
   }
 
-  // Add other methods like signOut, currentUser stream etc. if needed
+  // Sign Out
   Future<void> signOut() async {
-    await _auth.signOut();
-    debugPrint('User signed out');
+    await _firebaseAuth.signOut();
+    // Optionally notify backend if needed
   }
 
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
-
+  // Fetch User Profile (Example - if needed separately)
+  Future<User> fetchUserProfile(String uid) async { // Use local User model
+    // This might require a dedicated backend endpoint like /users/{uid}
+    // Or, if signin returns all needed data, this might not be necessary
+    throw UnimplementedError("fetchUserProfile not implemented");
+  }
 }

@@ -1,310 +1,251 @@
-// UI for signup / sign in 
-// Creates a basics screen and imports the model and service darts for this specific function
-// toggles between sign in and sign out 
-// user enters email and password
-// not integrated yet for data storage in the backend so user will get an error message after signing in
-// will be integrated with database and backend for deliverable 2 
-// this screen simply lays the groundwork for user sign in and sign out 
-
-import 'package:firebase_auth/firebase_auth.dart' as fb_auth; // Import Firebase Auth
-import '../models/user.dart' as app_user;
 import 'package:flutter/material.dart';
+// Removed direct FirebaseAuth import, use AuthService
 import '../services/auth_service.dart';
+import '../models/user.dart'; // Import the User model
 
-class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+// Assuming this screen handles both Sign Up and Sign In
+class AuthScreen extends StatefulWidget { // Renamed for clarity
+  const AuthScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
-  _SignUpScreenState createState() => _SignUpScreenState();
+  _AuthScreenState createState() => _AuthScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _displayNameController = TextEditingController();
+class _AuthScreenState extends State<AuthScreen> {
+  final AuthService _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
-  bool _isSignUp = true;
-  final AuthService _authService = AuthService(); // Instantiate AuthService
+  bool _isLogin = true; // Toggle between Login and Sign Up
+  String _email = '';
+  String _password = '';
+  String _name = ''; // For Sign Up
+  String _userType = 'donor'; // Default user type for Sign Up
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  // Store user data after login/signup
+  User? _userData; // Change type to User
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _displayNameController.dispose();  // ← add this
-    super.dispose();
+  void initState() {
+    super.initState();
+    // Listen to auth state changes to update UI automatically on login/logout
+    _authService.authStateChanges.listen((firebaseUser) {
+      if (firebaseUser == null && _userData != null) {
+        // If Firebase user is null (logged out), clear local user data
+        setState(() {
+          _userData = null;
+        });
+      }
+      // We fetch profile data *after* explicit login/signup via _submitAuthForm
+      // Avoid auto-fetching here unless you implement secure token refresh/backend calls
+    });
+    // Check if already logged in on startup (optional)
+    final currentUser = _authService.getCurrentUser();
+    if (currentUser != null) {
+       print("User already logged in via Firebase: ${currentUser.uid}. Fetching profile...");
+       // Attempt to fetch profile - requires secure way to call backend or re-auth
+       // For now, we'll rely on explicit login via the form.
+       // _fetchProfileOnStartup(currentUser.email!); // Needs secure implementation
+    }
   }
 
-  // Email validator
-  String? _emailValidator(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your email';
-    }
-    // Check if email contains '@' and ends with '.com' or '.edu'
-    if (!value.contains('@') || (!value.endsWith('.com') && !value.endsWith('.edu'))) {
-      return 'Please enter a valid email address (e.g., user@domain.com)';
-    }
-    return null;
-  }
+  // // Placeholder for fetching profile securely on startup (requires token auth ideally)
+  // Future<void> _fetchProfileOnStartup(String email) async { ... }
 
-  // Password validator
-  String? _passwordValidator(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your password';
+  Future<void> _submitAuthForm() async {
+    if (!_formKey.currentState!.validate()) {
+      return; // Don't submit if form is invalid
     }
-    if (value.length < 7) {
-      return 'Password must be at least 7 characters';
-    }
-    if (!RegExp(r'[0-9]').hasMatch(value)) {
-      return 'Password must contain at least 1 number';
-    }
-    if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
-      return 'Password must contain at least 1 special character';
-    }
-    return null;
-  }
-
-  void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    // Show loading indicator (optional but good UX)
-    // showDialog(context: context, builder: (_) => Center(child: CircularProgressIndicator()));
-
+    _formKey.currentState!.save();
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
-      if (_isSignUp) {
-        final newUser = app_user.User(
-          email: email,
-          password: password, // Sending password here might be insecure depending on backend
-          displayName: _displayNameController.text.trim(),
-        );
-        final success = await _authService.signUpWithBackend(newUser);
-
-        // if (mounted) Navigator.pop(context); // Hide loading indicator
-
-        if (success && mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Sign Up Successful. Please Sign In.')));
-          // Switch to Sign In view after successful signup
-          setState(() {
-            _isSignUp = false;
-          });
-        } else if (mounted) { // Check mounted before showing error
-           ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Sign Up failed on server. Please try again.')));
-        }
-      } else { // Sign In logic
-        // 1) Sign in to Firebase
-        // Change the expected type to fb_auth.User?
-        final fb_auth.User? firebaseUser = await _authService.signInWithEmail(email, password);
-
-        // Check if the returned firebaseUser is null
-        if (firebaseUser == null) {
-           // if (mounted) Navigator.pop(context); // Hide loading indicator
-           throw Exception('Firebase authentication failed. Check email/password.');
-        }
-
-        // Safely get the ID token directly from the Firebase User object
-        final String? idToken = await firebaseUser.getIdToken(); // Get token from firebaseUser
-
-        if (idToken == null) {
-          throw Exception('Could not retrieve ID token.');
-        }
-
-        // 2) Send token to backend for verification/profile retrieval
-        final profile = await _authService.signInWithToken(idToken);
-
-        // if (mounted) Navigator.pop(context); // Hide loading indicator
-
-        if (profile != null && mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Sign In Successful')));
-          // TODO: Navigate to the main app screen after successful sign-in
-          // Navigator.pushReplacementNamed(context, '/home'); // Example navigation
-        } else if (mounted) { // Check mounted before showing error
-           ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Backend sign in failed. Please try again.')));
-        }
+      User result; // Change type to User
+      if (_isLogin) {
+        print('Attempting sign in via AuthService for $_email');
+        result = await _authService.signIn(_email, _password); // Assign User directly
+        print('Sign in successful via AuthService, user data: ${result.toJson()}'); // Example: Log user data
+      } else {
+        print('Attempting sign up via AuthService for $_email as $_userType');
+        result = await _authService.signUp(_email, _password, _name, _userType); // Assign User directly
+        print('Sign up successful via AuthService, user data: ${result.toJson()}'); // Example: Log user data
       }
+      setState(() {
+        _userData = result; // Store User object
+        // Optionally navigate away after success
+        // Navigator.of(context).pushReplacementNamed('/home');
+      });
     } catch (e) {
-      // if (mounted) Navigator.pop(context); // Hide loading indicator
-      if (mounted) { // Check mounted before showing error
-        // Provide more specific error messages if possible
-        String errorMessage = 'An error occurred: $e';
-        if (e.toString().contains('firebase_auth/invalid-credential') || e.toString().contains('Firebase auth failed')) {
-            errorMessage = 'Invalid email or password.';
-        } else if (e.toString().contains('firebase_auth/user-not-found')) {
-            errorMessage = 'No user found with this email.';
-        } else if (e.toString().contains('firebase_auth/wrong-password')) {
-            errorMessage = 'Incorrect password.';
-        }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
+      setState(() {
+        _errorMessage = e.toString().replaceFirst('Exception: ', ''); // Show error
+      });
+      print('Auth form submission error: $e');
+    } finally {
+      // Ensure isLoading is reset even if mounted check is needed in complex scenarios
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
-    } catch (e, stackTrace) { // Catch everything
-        // ONLY PRINT - NO OTHER LOGIC
-        print("--- RAW CATCH BLOCK ---");
-        print("Caught Error Type: ${e.runtimeType}");
-        print("Caught Error: $e");
-        print("Caught StackTrace:\n$stackTrace");
-        print("--- END RAW CATCH BLOCK ---");
-        // DO NOT add ScaffoldMessenger or any other logic here for now
     }
-    // Ensure no other 'on Exception catch' or 'on FirebaseAuthException catch' blocks exist below this one.
-  } // End of _submit method
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Show profile view if logged in, otherwise show auth form
+    return _userData != null ? _buildProfileView() : _buildAuthForm();
+  }
+
+  // --- Authentication Form Widget ---
+  Widget _buildAuthForm() {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _isSignUp ? 'Sign Up' : 'Sign In',
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 26,  // Set font size to 26
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFFFFFFF), // white
-                Color(0xFFE0F7FA), // very light blue
-                Color(0xFFB2EBF2), // soft sky blue
+        title: Text(_isLogin ? 'Login' : 'Sign Up'),
+        backgroundColor: Colors.cyan[100], // Example styling
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                if (!_isLogin) // Name field only for Sign Up
+                  TextFormField(
+                    key: const ValueKey('name'),
+                    decoration: const InputDecoration(labelText: 'Name'),
+                    validator: (value) => (value == null || value.isEmpty) ? 'Please enter your name' : null,
+                    onSaved: (value) => _name = value!,
+                  ),
+                TextFormField(
+                  key: const ValueKey('email'),
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) => (value == null || !value.contains('@')) ? 'Please enter a valid email' : null,
+                  onSaved: (value) => _email = value!,
+                ),
+                TextFormField(
+                  key: const ValueKey('password'),
+                  decoration: const InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                  validator: (value) => (value == null || value.length < 6) ? 'Password must be at least 6 characters' : null,
+                  onSaved: (value) => _password = value!,
+                ),
+                 if (!_isLogin) // User type selection only for Sign Up
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      child: DropdownButtonFormField<String>(
+                        value: _userType,
+                        decoration: const InputDecoration(labelText: 'Register As', border: OutlineInputBorder()),
+                        items: <String>['donor', 'volunteer', 'organization'] // Match backend/profile needs
+                            .map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value[0].toUpperCase() + value.substring(1)),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) => setState(() => _userType = newValue!),
+                        onSaved: (value) => _userType = value!,
+                      ),
+                    ),
+                const SizedBox(height: 20),
+                if (_isLoading)
+                  const CircularProgressIndicator()
+                else
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.cyan,
+                      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                      textStyle: const TextStyle(fontSize: 16)
+                    ),
+                    onPressed: _submitAuthForm,
+                    child: Text(_isLogin ? 'Login' : 'Sign Up'),
+                  ),
+                if (_errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 15.0),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _isLogin = !_isLogin;
+                      _errorMessage = null; // Clear error on switch
+                      _formKey.currentState?.reset(); // Reset form fields on switch
+                    });
+                  },
+                  child: Text(
+                      _isLogin ? 'Create new account' : 'I already have an account',
+                      style: TextStyle(color: Colors.cyan[800]),
+                  ),
+                ),
               ],
             ),
           ),
         ),
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFFFFFF), // white
-              Color(0xFFE0F7FA), // very light blue
-              Color(0xFFB2EBF2), // soft sky blue
-            ],
-          ),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                color: Colors.white,
-                elevation: 6,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            labelStyle: TextStyle(color: Colors.black),
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(Radius.circular(12)),
-                            ),
-                          ),
-                          style: const TextStyle(color: Colors.black),
-                          validator: _emailValidator,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Password',
-                            labelStyle: TextStyle(color: Colors.black),
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(Radius.circular(12)),
-                            ),
-                          ),
-                          style: const TextStyle(color: Colors.black),
-                          validator: _passwordValidator,
-                        ),
-                        if (_isSignUp) ...[
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _displayNameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Display Name',
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(12)),
-                              ),
-                            ),
-                            style: const TextStyle(color: Colors.black),
-                            validator: (value) =>
-                                value == null || value.trim().isEmpty ? 'Please enter a display name' : null,
-                          ),
-                        ],
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _submit,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              side: const BorderSide(color: Colors.black),
-                            ),
-                          ),
-                          child: Text(_isSignUp ? 'Sign Up' : 'Sign In'),
-                        ),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _isSignUp = !_isSignUp;
-                            });
-                          },
-                          child: Text(
-                            _isSignUp
-                                ? 'Already have an account? Sign in'
-                                : 'Don’t have an account? Sign up',
-                            style: const TextStyle(color: Colors.black),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
+
+  // --- Profile View Widget (Displayed after login) ---
+   Widget _buildProfileView() {
+     return Scaffold(
+       appBar: AppBar(
+         title: const Text('Profile'),
+         backgroundColor: Colors.cyan[100],
+         actions: [
+           IconButton(
+             icon: const Icon(Icons.logout),
+             tooltip: 'Logout',
+             onPressed: () async {
+               await _authService.signOut();
+               // No need to setState here, the authStateChanges listener handles it
+             },
+           ),
+         ],
+       ),
+       body: Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: RefreshIndicator( // Optional: Allow pull-to-refresh profile
+           onRefresh: () async {
+              // Re-fetch profile data if needed (requires secure backend call)
+              print("Profile refresh not implemented (requires secure backend call)");
+           },
+           child: ListView(
+             children: [
+               // Use correct field name 'name' (verify in User model)
+               Text('Welcome, ${_userData?.name ?? 'User'}!', style: Theme.of(context).textTheme.headlineSmall),
+               const SizedBox(height: 15),
+               Card(
+                 child: Padding(
+                   padding: const EdgeInsets.all(12.0),
+                   child: Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       // Use correct field name 'email' (verify in User model)
+                       Text('Email: ${_userData?.email ?? 'N/A'}'),
+                       const SizedBox(height: 8),
+                       // Use correct field name 'userType' (verify in User model)
+                       Text('User Type: ${_userData?.userType ?? 'N/A'}'),
+                       const SizedBox(height: 8),
+                       // Use correct field name 'uid' (verify in User model)
+                       Text('UID: ${_userData?.uid ?? 'N/A'}'),
+                     ],
+                   ),
+                 ),
+               ),
+               // Add more profile details or actions here
+             ],
+           ),
+         ),
+       ),
+     );
+   }
 }

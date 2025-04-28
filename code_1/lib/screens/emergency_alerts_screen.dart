@@ -18,12 +18,12 @@ class EmergencyAlertsScreen extends StatefulWidget {
 }
 
 class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
-  late Future<List<Alert>> alerts;
+  late Future<List<Alert>> _alertsFuture; // Rename for clarity
 
   @override
   void initState() {
     super.initState();
-    alerts = EmergencyAlertService.fetchEmergencyAlerts();
+    _alertsFuture = EmergencyAlertService.fetchEmergencyAlerts(); // Use renamed variable
   }
 
   @override
@@ -57,7 +57,7 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
         ),
         child: SafeArea(
           child: FutureBuilder<List<Alert>>(
-            future: alerts,
+            future: _alertsFuture, // Use renamed variable
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -78,7 +78,7 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
                   IconData icon;
                   Color iconColor;
 
-                  switch (alert.alertTitle.toLowerCase()) {
+                  switch (alert.title.toLowerCase()) {
                     case 'flood warning':
                       icon = Icons.water_drop;
                       iconColor = Colors.blueAccent;
@@ -109,12 +109,11 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
                     ),
                     child: ListTile(
                       leading: CircleAvatar(
-                        // ignore: deprecated_member_use
                         backgroundColor: iconColor.withOpacity(0.1),
                         child: Icon(icon, color: iconColor),
                       ),
                       title: Text(
-                        alert.alertTitle,
+                        alert.title,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
@@ -123,10 +122,11 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
                       subtitle: Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          "${alert.alertDescription}\n\n📍 Location: ${alert.alertLocation}\n📅 Date: ${alert.alertDate}",
-                          style: const TextStyle(fontSize: 14, height: 1.4),
+                          "${alert.message}\nArea: ${alert.targetArea ?? 'N/A'} | Severity: ${alert.severity}\nTime: ${alert.createdAt.toDate().toString()}",
+                          style: TextStyle(color: Colors.grey[700], fontSize: 14, height: 1.4),
                         ),
                       ),
+                      onTap: () => _showAlertDetails(context, alert),
                     ),
                   );
                 },
@@ -134,6 +134,36 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
             },
           ),
         ),
+      ),
+    );
+  }
+
+  void _showAlertDetails(BuildContext context, Alert alert) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(alert.title),
+        content: SingleChildScrollView(
+          child: ListBody(
+            children: <Widget>[
+              Text('Message: ${alert.message}'),
+              const SizedBox(height: 8),
+              Text('Target Area: ${alert.targetArea ?? 'N/A'}'),
+              const SizedBox(height: 8),
+              Text('Severity: ${alert.severity}'), // Display severity
+              const SizedBox(height: 8),
+              Text('Time: ${alert.createdAt.toDate().toString()}'), // Display formatted timestamp
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('Close'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
       ),
     );
   }

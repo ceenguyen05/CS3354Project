@@ -1,6 +1,7 @@
-// lib/models/request.dart
+// sets the model for a user request 
+// takes in 5 variables as define in the Request class 
+// this allows for data handling locally and in the database 
 
-/// Model for an aid request.
 class Request {
   final String name;
   final String type;
@@ -16,7 +17,16 @@ class Request {
     required this.longitude,
   });
 
-  /// Convert this Request into JSON to send to your backend.
+  factory Request.fromJson(Map<String, dynamic> json) {
+    return Request(
+      name: json['name'] as String,
+      type: json['type'] as String,
+      description: json['description'] as String,
+      latitude: json['latitude'] as double,
+      longitude: json['longitude'] as double,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'name': name,
@@ -26,16 +36,12 @@ class Request {
       'longitude': longitude,
     };
   }
-
-  /// Create a Request instance from JSON coming back from your backend.
-  factory Request.fromJson(Map<String, dynamic> json) {
-    return Request(
-      name: (json['name'] as String?) ?? 'Unknown',
-      type: (json['type'] as String?) ?? 'Unknown',
-      description: (json['description'] as String?) ?? '',
-      // Handle potential null values for latitude and longitude
-      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
-      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
-    );
-  }
 }
+
+
+
+
+
+
+
+
