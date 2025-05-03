@@ -95,6 +95,9 @@ Files and What They Are:
 - code_1/lib has all the frontend 
 - code_1/backend has all the backend 
 
+## Watch Demo 
+- I used my MAC to record this so I have quicktime player to watch the recording
+
 ## Team
 
 - Casey Nguyen

@@ -38,9 +38,9 @@ HOW TO RUN
 
 ## Testing
 
-**Step 1: Download Flutter Extension on VSCODE. Have the Flutter SDK in your downloads 
+**Step 1: Download Flutter Extension on VSCODE. Have the Flutter SDK in your downloads (Create a New Project)
 
-**Step 2: Go to pubspec.yaml and save it (CMD + S) or run flutter pub get 
+**Step 2: Go to pubspec.yaml and save it (CMD + S on mac) or run flutter pub get. This should run pub get to get DEPENDENCIES
 
 **Step 3: Create a Firebase Project**
 
