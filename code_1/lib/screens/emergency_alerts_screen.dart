@@ -5,6 +5,8 @@
 // in deliberable 2, will implemented a rotating emergency alerts that is randomized and displayed
 // will be updated to stay on while emergency is active and for ones that are outdated/ dealt with, will say so
 
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import '../models/alert.dart';
 import '../services/emergency_alert_service.dart';

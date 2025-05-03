@@ -4,6 +4,8 @@
 // Will be soon updated for deliverable 2 to display all resources, even resources with 0 in your area
 // Will be able to integrate with updating data after a donation has been made for deliverable 2
 
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import '../models/resource.dart';
 import '../services/resource_service.dart';

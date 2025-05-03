@@ -1,6 +1,8 @@
 // Home Screen UI
 // This is the first screen the user sees when they enter the website.
 
+// ignore_for_file: avoid_print, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart'; // <--- ADD THIS IMPORT
 import 'package:code_1/widgets/centered_view.dart';

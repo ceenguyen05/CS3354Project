@@ -2,6 +2,8 @@
 // Creates a basics screen and imports the model and service darts for this specific function
 // Asks the user for its name, type of donation, and description of the donation
 
+// ignore_for_file: use_build_context_synchronously
+
 // donation_screen.dart
 import 'package:flutter/material.dart';
 import '../models/donation.dart';
