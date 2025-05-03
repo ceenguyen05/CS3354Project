@@ -10,6 +10,7 @@
 
 // ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
+import 'dart:async'; // Import async library for Timer
 import 'package:flutter/material.dart';
 import '../models/resource.dart';
 import '../services/resource_service.dart';
@@ -29,6 +30,8 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
   String? _sortOption;
   final TextEditingController _searchController = TextEditingController();
   String _searchTerm = '';
+  Timer? _debounce; // Add this Timer variable
+  final FocusNode _searchFocusNode = FocusNode(); // 1. Declare FocusNode
 
   final LinearGradient gradient = const LinearGradient(
     begin: Alignment.topLeft,
@@ -43,6 +46,8 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _debounce?.cancel(); // Cancel the timer on dispose
+    _searchFocusNode.dispose(); // 2. Dispose FocusNode
     super.dispose();
   }
 
@@ -114,8 +119,26 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
                     children: [
                       TextField(
                         controller: _searchController,
-                        onChanged: (val) =>
-                            setState(() => _searchTerm = val.toLowerCase()),
+                        focusNode: _searchFocusNode, // 3. Assign FocusNode
+                        onChanged: (val) {
+                          // Cancel the previous timer if it exists and is active
+                          if (_debounce?.isActive ?? false) _debounce!.cancel();
+                          // Start a new timer
+                          _debounce = Timer(const Duration(milliseconds: 500), () {
+                            // This code runs after 500ms of inactivity
+                            if (mounted) { // Check if the widget is still mounted
+                              setState(() {
+                                _searchTerm = val.toLowerCase();
+                              });
+                              // Request focus AFTER the frame build completes
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) { // Check mounted again in callback
+                                  _searchFocusNode.requestFocus();
+                                }
+                              });
+                            }
+                          });
+                        },
                         decoration: InputDecoration(
                           hintText: 'Search by name or location...',
                           prefixIcon: const Icon(Icons.search),
