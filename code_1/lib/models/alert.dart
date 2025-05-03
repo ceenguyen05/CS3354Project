@@ -1,21 +1,41 @@
-// this file and model screen "models" how the data should be read from the user and stored as a json file in the local database 
-// takes the alert title, description and the date of the emergency alert 
-// returns an Aert Object with these 3 things 
+// lib/models/alert.dart
+
+
+// written by: Casey 
+// tested by: Casey 
+// debugged by: Casey 
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Alert {
-  final String alertTitle;
-  final String alertDescription;
-  final String alertLocation ;
-  final String alertDate;
+  final String id;
+  final String message;
+  final String severity;
+  final DateTime timestamp;
 
-  Alert({required this.alertTitle, required this.alertDescription, required this.alertLocation, required this.alertDate});
+  Alert({
+    this.id = '',
+    required this.message,
+    required this.severity,
+    required this.timestamp,
+  });
 
-  // From JSON to Alert object
-  factory Alert.fromJson(Map<String, dynamic> json) {
+  /// Existing JSON constructor left intact.
+  factory Alert.fromJson(Map<String, dynamic> json) => Alert(
+    message: json['message'],
+    severity: json['severity'],
+    timestamp: DateTime.now(),
+  );
+  Map<String, dynamic> toJson() => {'message': message, 'severity': severity};
+
+  /// Firestore ▶️ model
+  factory Alert.fromFirestore(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data();
     return Alert(
-      alertTitle: json['alertTitle'],
-      alertDescription: json['alertDescription'],
-      alertLocation: json['alertLocation'] ,
-      alertDate: json['alertDate'],
+      id: doc.id,
+      message: d['message'] as String,
+      severity: d['severity'] as String,
+      timestamp: (d['timestamp'] as Timestamp).toDate(),
     );
   }
 }

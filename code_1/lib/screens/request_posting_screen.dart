@@ -1,3 +1,7 @@
+// written by: Casey & Andy & Kevin 
+// tested by: Casey & Andy & Kevin 
+// debugged by: Casey & Kevin 
+
 // UI for user request screen
 // Creates a basics screen and imports the model and service darts for this specific function
 // Asks the user for the name, aidtype, and description
@@ -53,53 +57,31 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
   String _name = '';
   Position? _location;
   bool _locationMissingError = false;
-  final List<Request> _submittedRequests = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadExistingRequests();
-  }
-
-  void _loadExistingRequests() async {
-    try {
-      final existing = await RequestService.fetchCurrentRequests();
-      // Add this print statement to see the parsed data
-      print('--- Fetched Requests Data ---');
-      for (var req in existing) {
-        print(req.toJson()); // Use toJson to see what the Request object holds
-      }
-      print('-----------------------------');
-
-      if (mounted) {
-        setState(() {
-          _submittedRequests.clear();
-          _submittedRequests.addAll(existing);
-        });
-      }
-    } catch (e) {
-      print('Error loading existing requests: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading requests: $e')),
-        );
-      }
-    }
-  }
+  final RequestPostingService _requestService = RequestPostingService();
 
   Future<void> _getLocation() async {
     final permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       await Geolocator.requestPermission();
     }
-    final position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _location = position;
-      _locationMissingError = false;
-    });
+    final updatedPermission = await Geolocator.checkPermission();
+    if (updatedPermission == LocationPermission.denied || updatedPermission == LocationPermission.deniedForever) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permission denied.')));
+      return;
+    }
+
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _location = position;
+        _locationMissingError = false;
+      });
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to get location: $e')));
+    }
   }
 
-  Future<void> _submitRequest() async {
+  void _submitRequest() async {
     setState(() {
       _locationMissingError = _location == null;
     });
@@ -113,28 +95,26 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
         description: _description,
         latitude: _location!.latitude,
         longitude: _location!.longitude,
+        timestamp: DateTime.now(),
       );
 
       try {
-        await RequestService.submitRequest(request);
+        await _requestService.submitRequest(request);
 
         if (mounted) {
-          ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Request submitted.')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Request submitted.')),
+          );
         }
 
-        _loadExistingRequests();
-
-        if (mounted) {
-          setState(() {
-            _formKey.currentState!.reset();
-            _location = null;
-            _aidType = 'Medical';
-            _description = '';
-            _name = '';
-            _locationMissingError = false;
-          });
-        }
+        setState(() {
+          _formKey.currentState!.reset();
+          _location = null;
+          _aidType = 'Medical';
+          _description = '';
+          _name = '';
+          _locationMissingError = false;
+        });
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -340,31 +320,46 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
             ),
             const SizedBox(height: 0),
             Expanded(
-              child: _submittedRequests.isEmpty
-                  ? const Center(child: Text('No current requests for help.'))
-                  : ListView.builder(
-                      itemCount: _submittedRequests.length,
-                      itemBuilder: (context, index) {
-                        final request = _submittedRequests[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+              child: StreamBuilder<List<Request>>(
+                stream: _requestService.watchRequests(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error loading requests: ${snapshot.error}'));
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Text('No current requests for help.'));
+                  }
+
+                  final submittedRequests = snapshot.data!;
+
+                  return ListView.builder(
+                    itemCount: submittedRequests.length,
+                    itemBuilder: (context, index) {
+                      final request = submittedRequests[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 2,
+                        child: ListTile(
+                          leading: _getAidIcon(request.type),
+                          title: Text(
+                            '${request.name} - ${request.type}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          elevation: 2,
-                          child: ListTile(
-                            leading: _getAidIcon(request.type),
-                            title: Text(
-                              '${request.name} - ${request.type}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(
-                              '${request.description}\nLat: ${request.latitude}, Long: ${request.longitude}',
-                            ),
+                          subtitle: Text(
+                            '${request.description}\nLat: ${request.latitude}, Long: ${request.longitude}',
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -375,22 +370,31 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
   void _showMapDialog() {
     showDialog(
       context: context,
-      builder:
-          (context) => Dialog(
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.75,
-              width: MediaQuery.of(context).size.width * 0.9,
-              child: Stack(
+      builder: (context) => Dialog(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.75,
+          width: MediaQuery.of(context).size.width * 0.9,
+          child: StreamBuilder<List<Request>>(
+            stream: _requestService.watchRequests(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError || !snapshot.hasData) {
+                return const Center(child: Text('Could not load map data.'));
+              }
+              final mapRequests = snapshot.data!;
+
+              return Stack(
                 children: [
                   FlutterMap(
                     options: MapOptions(
-                      initialCenter:
-                          _submittedRequests.isNotEmpty
-                              ? LatLng(
-                                _submittedRequests[0].latitude,
-                                _submittedRequests[0].longitude,
-                              )
-                              : LatLng(37.7749, -122.4194),
+                      initialCenter: mapRequests.isNotEmpty
+                          ? LatLng(
+                              mapRequests[0].latitude,
+                              mapRequests[0].longitude,
+                            )
+                          : const LatLng(37.7749, -122.4194),
                       initialZoom: 5,
                     ),
                     children: [
@@ -400,57 +404,54 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                         userAgentPackageName: 'com.example.app',
                       ),
                       MarkerLayer(
-                        markers:
-                            _submittedRequests.map((req) {
-                              return Marker(
-                                width: 40,
-                                height: 40,
-                                point: LatLng(req.latitude, req.longitude),
-                                child: ScalableMarker(
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder:
-                                          (_) => AlertDialog(
-                                            title: Text(
-                                              '${req.name} - ${req.type}',
-                                            ),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(req.description),
-                                                const SizedBox(height: 8),
-                                                Text('📍 Lat: ${req.latitude}'),
-                                                Text(
-                                                  '📍 Long: ${req.longitude}',
-                                                ),
-                                              ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed:
-                                                    () =>
-                                                        Navigator.of(
-                                                          context,
-                                                        ).pop(),
-                                                child: const Text("Close"),
-                                              ),
-                                            ],
-                                          ),
-                                    );
-                                  },
-                                ),
-                              );
-                            }).toList(),
+                        markers: mapRequests.map((req) {
+                          return Marker(
+                            width: 40,
+                            height: 40,
+                            point: LatLng(req.latitude, req.longitude),
+                            child: ScalableMarker(
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: Text(
+                                      '${req.name} - ${req.type}',
+                                    ),
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(req.description),
+                                        const SizedBox(height: 8),
+                                        Text('📍 Lat: ${req.latitude}'),
+                                        Text(
+                                          '📍 Long: ${req.longitude}',
+                                        ),
+                                      ],
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
+                                        child: const Text("Close"),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ],
                   ),
                 ],
-              ),
-            ),
+              );
+            },
           ),
+        ),
+      ),
     );
   }
 }

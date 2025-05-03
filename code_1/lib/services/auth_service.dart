@@ -1,108 +1,44 @@
 // lib/services/auth_service.dart
+// written by: Casey 
+// tested by: Casey 
+// debugged by: Casey 
 
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../models/user.dart' as app_user; // Use prefix to avoid name clash
-import 'api.dart'; // Ensure this import is present
-import 'package:firebase_auth/firebase_auth.dart'; // Firebase Auth User
-import 'package:flutter/foundation.dart' show debugPrint; // <-- REMOVE kIsWeb from here
+import 'package:firebase_auth/firebase_auth.dart'
+    as fb_auth; // Use prefix for firebase auth User
+import '../models/user.dart' as app_user; // Use prefix for your User model
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final _auth = fb_auth.FirebaseAuth.instance;
 
-  /// Sign up a new user via backend API (creates both Firebase Auth + Firestore profile).
-  // Renamed from signUp to signUpWithBackend
-  Future<bool> signUpWithBackend(app_user.User user) async {
-    debugPrint('Attempting sign up via backend: ${user.email}');
-    final resp = await http.post(
-      Uri.parse('$apiUrl/signup'), // Use apiUrl
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(user.toJson()),
-    );
-    debugPrint('Backend Sign Up Status: ${resp.statusCode}');
-    return resp.statusCode == 200 || resp.statusCode == 201; // Allow Created
-  }
-
-  /// Sign in by verifying a Firebase ID token via backend; returns the user profile.
-  Future<Map<String, dynamic>?> signInWithToken(String idToken) async {
-    debugPrint('Attempting sign in via backend with token');
-    final resp = await http.post(
-      Uri.parse('$apiUrl/signin'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'id_token': idToken}),
-    );
-    debugPrint('Backend Sign In (Token) Status: ${resp.statusCode}');
-    if (resp.statusCode == 200) {
-      return jsonDecode(resp.body) as Map<String, dynamic>;
-    }
-    return null;
-  }
-
-  /// Sign in using email/password via backend
-  Future<bool> signInWithEmailBackend({ // Renamed for clarity
-    required String email,
-    required String password,
-  }) async {
-    debugPrint('Attempting sign in via backend with email: $email');
-    final resp = await http.post(
-      Uri.parse('$apiUrl/signin'), // Use apiUrl
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
-     debugPrint('Backend Sign In (Email) Status: ${resp.statusCode}');
-    return resp.statusCode == 200;
-  }
-
-  /// Sign up directly using Firebase Authentication
-  // Kept name as signUp for direct Firebase interaction
-  Future<User?> signUp(String email, String password) async {
-    debugPrint('Attempting direct Firebase sign up with email: $email'); // Log attempt
+  /// Sign up user with FirebaseAuth; returns true on success.
+  Future<bool> signUp(app_user.User user) async {
+    // Use app_user.User
     try {
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
+      await _auth.createUserWithEmailAndPassword(
+        email: user.email,
+        password: user.password,
       );
-      debugPrint('Direct Firebase sign up successful: ${result.user?.uid}'); // Log success
-      // Optionally: Call backend here to create user profile in Firestore if needed
-      // await createUserProfileInFirestore(result.user);
-      return result.user;
-    } on FirebaseAuthException catch (e) {
-      debugPrint('FirebaseAuthException during sign up: ${e.code} - ${e.message}');
-      // Rethrow or handle specific errors (e.g., display message)
-      throw Exception('Sign up failed: ${e.message}'); // Propagate error
-    } catch (e) {
-      debugPrint('Generic error during direct Firebase sign up: $e'); // Log other errors
-       throw Exception('An unknown error occurred during sign up.'); // Propagate error
+      return true;
+    } on fb_auth.FirebaseAuthException {
+      // Use fb_auth prefix
+      return false;
     }
   }
 
-   /// Sign in directly using Firebase Authentication
-  Future<User?> signInWithEmail(String email, String password) async {
-    debugPrint('Attempting direct Firebase sign in with email: $email');
+  /// Sign in existing user; returns true on success.
+  Future<bool> signIn(String email, String password) async {
     try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      debugPrint('Direct Firebase sign in successful: ${result.user?.uid}');
-      // Optionally: Fetch user profile from Firestore/backend after successful sign in
-      // final userProfile = await fetchUserProfileFromBackend(result.user?.uid);
-      return result.user;
-    } on FirebaseAuthException catch (e) {
-      debugPrint('FirebaseAuthException during sign in: ${e.code} - ${e.message}');
-      throw Exception('Sign in failed: ${e.message}'); // Propagate error
-    } catch (e) {
-      debugPrint('Generic error during direct Firebase sign in: $e');
-      throw Exception('An unknown error occurred during sign in.'); // Propagate error
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      return true;
+    } on fb_auth.FirebaseAuthException {
+      // Use fb_auth prefix
+      return false;
     }
   }
 
-  // Add other methods like signOut, currentUser stream etc. if needed
-  Future<void> signOut() async {
-    await _auth.signOut();
-    debugPrint('User signed out');
-  }
+  /// Sign out the current user.
+  Future<void> signOut() => _auth.signOut();
 
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
-
+  /// Currently signed-in user (or null).
+  fb_auth.User? get currentUser => _auth.currentUser; // Use fb_auth.User
 }

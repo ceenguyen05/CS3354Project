@@ -1,3 +1,7 @@
+// written by: Casey & Andy & Kevin 
+// tested by: Casey & Andy & Kevin 
+// debugged by: Casey & Kevin 
+
 // UI for signup / sign in 
 // Creates a basics screen and imports the model and service darts for this specific function
 // toggles between sign in and sign out 
@@ -6,10 +10,9 @@
 // will be integrated with database and backend for deliverable 2 
 // this screen simply lays the groundwork for user sign in and sign out 
 
-import 'package:firebase_auth/firebase_auth.dart' as fb_auth; // Import Firebase Auth
-import '../models/user.dart' as app_user;
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../models/user.dart' as app_user; // Use prefix for your User model
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -22,18 +25,8 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _displayNameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isSignUp = true;
-  final AuthService _authService = AuthService(); // Instantiate AuthService
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _displayNameController.dispose();  // ← add this
-    super.dispose();
-  }
 
   // Email validator
   String? _emailValidator(String? value) {
@@ -65,99 +58,45 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+    if (_formKey.currentState!.validate()) {
+      final email = _emailController.text;
+      final password = _passwordController.text;
 
-    // Show loading indicator (optional but good UX)
-    // showDialog(context: context, builder: (_) => Center(child: CircularProgressIndicator()));
-
-    try {
-      if (_isSignUp) {
-        final newUser = app_user.User(
-          email: email,
-          password: password, // Sending password here might be insecure depending on backend
-          displayName: _displayNameController.text.trim(),
-        );
-        final success = await _authService.signUpWithBackend(newUser);
-
-        // if (mounted) Navigator.pop(context); // Hide loading indicator
-
-        if (success && mounted) {
+      try {
+        if (_isSignUp) {
+          // Use the prefixed user model
+          final user = app_user.User(email: email, password: password);
+          final success = await AuthService().signUp(user);
+          if (success && mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Sign Up Successful')));
+          } else if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Sign Up Failed')));
+          }
+        } else {
+          final success = await AuthService().signIn(email, password);
+          if (success && mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Sign In Successful')));
+          } else if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Sign In Failed')));
+          }
+        }
+      } catch (e) {
+        if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Sign Up Successful. Please Sign In.')));
-          // Switch to Sign In view after successful signup
-          setState(() {
-            _isSignUp = false;
-          });
-        } else if (mounted) { // Check mounted before showing error
-           ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Sign Up failed on server. Please try again.')));
-        }
-      } else { // Sign In logic
-        // 1) Sign in to Firebase
-        // Change the expected type to fb_auth.User?
-        final fb_auth.User? firebaseUser = await _authService.signInWithEmail(email, password);
-
-        // Check if the returned firebaseUser is null
-        if (firebaseUser == null) {
-           // if (mounted) Navigator.pop(context); // Hide loading indicator
-           throw Exception('Firebase authentication failed. Check email/password.');
-        }
-
-        // Safely get the ID token directly from the Firebase User object
-        final String? idToken = await firebaseUser.getIdToken(); // Get token from firebaseUser
-
-        if (idToken == null) {
-          throw Exception('Could not retrieve ID token.');
-        }
-
-        // 2) Send token to backend for verification/profile retrieval
-        final profile = await _authService.signInWithToken(idToken);
-
-        // if (mounted) Navigator.pop(context); // Hide loading indicator
-
-        if (profile != null && mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Sign In Successful')));
-          // TODO: Navigate to the main app screen after successful sign-in
-          // Navigator.pushReplacementNamed(context, '/home'); // Example navigation
-        } else if (mounted) { // Check mounted before showing error
-           ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Backend sign in failed. Please try again.')));
+          ).showSnackBar(SnackBar(content: Text('An error occurred: $e')));
         }
       }
-    } catch (e) {
-      // if (mounted) Navigator.pop(context); // Hide loading indicator
-      if (mounted) { // Check mounted before showing error
-        // Provide more specific error messages if possible
-        String errorMessage = 'An error occurred: $e';
-        if (e.toString().contains('firebase_auth/invalid-credential') || e.toString().contains('Firebase auth failed')) {
-            errorMessage = 'Invalid email or password.';
-        } else if (e.toString().contains('firebase_auth/user-not-found')) {
-            errorMessage = 'No user found with this email.';
-        } else if (e.toString().contains('firebase_auth/wrong-password')) {
-            errorMessage = 'Incorrect password.';
-        }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
-      }
-    } catch (e, stackTrace) { // Catch everything
-        // ONLY PRINT - NO OTHER LOGIC
-        print("--- RAW CATCH BLOCK ---");
-        print("Caught Error Type: ${e.runtimeType}");
-        print("Caught Error: $e");
-        print("Caught StackTrace:\n$stackTrace");
-        print("--- END RAW CATCH BLOCK ---");
-        // DO NOT add ScaffoldMessenger or any other logic here for now
     }
-    // Ensure no other 'on Exception catch' or 'on FirebaseAuthException catch' blocks exist below this one.
-  } // End of _submit method
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -248,23 +187,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           style: const TextStyle(color: Colors.black),
                           validator: _passwordValidator,
                         ),
-                        if (_isSignUp) ...[
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _displayNameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Display Name',
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(12)),
-                              ),
-                            ),
-                            style: const TextStyle(color: Colors.black),
-                            validator: (value) =>
-                                value == null || value.trim().isEmpty ? 'Please enter a display name' : null,
-                          ),
-                        ],
                         const SizedBox(height: 24),
                         ElevatedButton(
                           onPressed: _submit,

@@ -1,24 +1,33 @@
+// written by: Casey & Andy & Kevin 
+// tested by: Casey & Andy & Kevin 
+// debugged by: Casey & Kevin 
+
 // Home Screen UI
 // This is the first screen the user sees when they enter the website.
-// Deliverable 1 focused on functionality; Deliverable 2 will enhance design.
+
+// ignore_for_file: avoid_print, deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // <--- ADD THIS IMPORT
 import 'package:code_1/widgets/centered_view.dart';
 import 'resource_inventory_screen.dart';
 import 'emergency_alerts_screen.dart';
 import 'donation_screen.dart';
 import 'request_posting_screen.dart';
 import 'package:code_1/navbar/nav_bar.dart';
-import '../widgets/intro.dart';
-import '../widgets/intro2.dart';
+import '../widgets/intro.dart'; // Correct import for Intro class
+import '../widgets/intro2.dart'; // Correct import for Intro2 class
 import '../widgets/user_stories.dart';
 import '../widgets/explanation.dart';
-import '../widgets/contact.dart';
-// import '../widgets/social.dart'; // REMOVE THIS LINE
+import '../widgets/contact.dart'; // Correct import for ContactInfoWidget class
+import '../widgets/social.dart';
 import '../widgets/team.dart';
 import '../widgets/ai.dart';
-import 'package:flutter/gestures.dart'; // Import for TapGestureRecognizer if launching URLs
-import 'package:url_launcher/url_launcher.dart'; // Import for launching URLs
+
+// Import the Volunteer model and service
+import '../models/volunteer.dart';
+import '../services/volunteer_service.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,6 +39,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+
+  // Instantiate the VolunteerService
+  final VolunteerService _volunteerService = VolunteerService();
 
   @override
   void initState() {
@@ -44,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       curve: Curves.easeIn,
     );
 
-    _fadeController.forward(); 
+    _fadeController.forward();
   }
 
   @override
@@ -55,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    // --- Build method with Volunteer List ADDED and const fixes ---
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -68,21 +81,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
         ),
-        child: SingleChildScrollView(
+        child: SingleChildScrollView( // Ensures content is scrollable
           child: CenteredView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                // --- EXISTING WIDGETS (UNCHANGED) ---
                 const CustomNavigationBar(),
                 const SizedBox(height: 18),
                 FadeTransition(
                   opacity: _fadeAnimation,
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 30),
+                    padding: const EdgeInsets.only(top: 30), // Keep existing padding
                     child: Wrap(
                       alignment: WrapAlignment.center,
-                      spacing: 18.0,
-                      runSpacing: 18.0,
+                      spacing: 18.0, // Keep existing spacing
+                      runSpacing: 18.0, // Keep existing runSpacing
                       children: [
                         _animatedButton(
                           label: 'See Available Resource Inventory',
@@ -105,69 +119,77 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(height: 30),
+                // --- END EXISTING WIDGETS ---
+
+                // --- NEW: Volunteer List Section ---
                 FadeTransition(
                   opacity: _fadeAnimation,
+                  child: Column( // Wrap title and list in a Column
+                    children: [
+                      const Text(
+                        'Volunteer Status', // Section Title
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildVolunteerList(), // Use StreamBuilder to build the list
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30), // Spacing after volunteer list
+                // --- END NEW Volunteer List Section ---
+
+
+                // --- EXISTING WIDGETS (with const fixes) ---
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  // REMOVED const from Row and children list
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Expanded(child: Intro()),   // Left side
-                      Expanded(child: Intro2()),  // Right side
+                    children: const [ // Keep const on children list IF children are const
+                      Expanded(child: Intro()),   // Intro() is likely not const
+                      Expanded(child: Intro2()),  // Intro2() is likely not const
                     ],
                   ),
                 ),
                 const SizedBox(height: 120),
                 FadeTransition(
                   opacity: _fadeAnimation,
-                  child: const UserStoriesWidget(),
+                  child: const UserStoriesWidget(), // Assuming this widget CAN be const
                 ),
                 const SizedBox(height: 120),
                 FadeTransition(
                   opacity: _fadeAnimation,
-                  child: const ExplanationWidget(),
+                  child: const ExplanationWidget(), // Assuming this widget CAN be const
                 ),
                  const SizedBox(height: 120),
                 FadeTransition(
                   opacity: _fadeAnimation,
-                  child: const AIWidget(),
+                  child: const AIWidget(), // Assuming this widget CAN be const
                 ),
                 const SizedBox(height: 120),
                 // Updated Row with Social and Team Widgets wrapped in a Wrap widget
                 FadeTransition(
                   opacity: _fadeAnimation,
-                  child: Wrap( // The Wrap widget itself is correct
+                  // REMOVED const from Wrap and children list
+                  child: Wrap(
                     alignment: WrapAlignment.center,
                     spacing: 22.0, // Space between widgets
                     runSpacing: 22.0, // Space between rows
-                    children: [
-                      // --- FIX START ---
-                      // Remove Flexible and create specific SocialWidgets
-                      // Example: Add multiple SocialWidgets for different platforms
-                      SocialWidget(
-                        icon: Icons.facebook, // Example icon
-                        tooltip: 'Facebook',
-                        onPressed: () {
-                          // Add action, e.g., launch URL
-                          // _launchURL('https://facebook.com');
-                          print('Facebook pressed');
-                        },
+                    children: [ // REMOVED const from this list
+                      Flexible(
+                        child: SocialWidget(),  // Left Widget (SocialWidget) - likely not const
                       ),
-                      SocialWidget(
-                        icon: Icons.camera_alt, // Example icon for Instagram
-                        tooltip: 'Instagram',
-                        onPressed: () {
-                           // _launchURL('https://instagram.com');
-                           print('Instagram pressed');
-                        },
+                      Flexible(
+                        child: ContactInfoWidget(),  // Middle Widget (ContactInfoWidget) - likely not const
                       ),
-                      // Add more SocialWidgets as needed...
-
-                      // Keep ContactInfoWidget and TeamWidget (remove Flexible)
-                      ContactInfoWidget(),  // Assuming this doesn't need Flexible
-                      TeamWidget(),         // Assuming this doesn't need Flexible
-                      // --- FIX END ---
+                      Flexible(
+                        child: TeamWidget(),  // Right Widget (TeamWidget) - likely not const
+                      ),
                     ],
                   ),
                 ),
+                 const SizedBox(height: 50), // Footer spacing
+                // --- END EXISTING WIDGETS ---
               ],
             ),
           ),
@@ -176,8 +198,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  // --- EXISTING HELPER WIDGET (UNCHANGED) ---
   Widget _animatedButton({required String label, required Widget page}) {
-    return ElevatedButton(
+     return ElevatedButton(
       onPressed: () {
         Navigator.push(
           context,
@@ -197,6 +220,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           vertical: 20,
           horizontal: 30,
         ),
+        // Add other styling if needed from your original code
       ),
       child: Text(
         label,
@@ -204,30 +228,75 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
   }
-}
+  // --- END EXISTING HELPER WIDGET ---
 
-// Custom widget for social media icons
-class SocialWidget extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
 
-  const SocialWidget({
-    super.key,
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
+  // --- UPDATED HELPER WIDGET: Builds the volunteer list with refined error handling ---
+  Widget _buildVolunteerList() {
+    return StreamBuilder<List<Volunteer>>(
+      stream: _volunteerService.watchVolunteers(), // Get the stream from the service
+      builder: (context, snapshot) {
+        // --- Check for errors FIRST ---
+        if (snapshot.hasError) {
+          print("StreamBuilder Error (Volunteers): ${snapshot.error}"); // Log the specific error object
+          String errorMessage = 'An error occurred loading volunteers.';
+          // Try to check if it's a FirebaseException (NOW THIS WILL WORK)
+          if (snapshot.error is FirebaseException) {
+             final fbError = snapshot.error as FirebaseException;
+             print("FirebaseException Code: ${fbError.code}");
+             print("FirebaseException Message: ${fbError.message}");
+             errorMessage = 'Error: ${fbError.message ?? fbError.code}';
+          } else {
+             // Print the runtime type if it's not a FirebaseException
+             print("Error type: ${snapshot.error.runtimeType}");
+          }
+          // Display a user-friendly message
+          return Center(child: Text('$errorMessage\nCheck browser console for more details.'));
+        }
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0), // Keep padding if needed
-      child: IconButton(
-        icon: Icon(icon, color: Colors.black, size: 30), // Adjusted size
-        tooltip: tooltip,
-        onPressed: onPressed,
-      ),
+        // Handle loading state
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Handle no data state (stream is active but Firestore returned nothing OR permissions denied silently)
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          print("StreamBuilder (Volunteers): No data received. Check Firestore data and rules.");
+          return const Center(child: Text('No volunteers found.'));
+        }
+
+        // If data is available, build the list
+        final volunteers = snapshot.data!;
+        return Container(
+          constraints: const BoxConstraints(maxHeight: 300), // Limit height
+          decoration: BoxDecoration( // Optional: Add background/border
+             color: Colors.white.withOpacity(0.5),
+             borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListView.builder(
+            shrinkWrap: true, // Important inside Column/constrained height
+            itemCount: volunteers.length,
+            itemBuilder: (context, index) {
+              final volunteer = volunteers[index];
+              return Card( // Use Card for better visual separation
+                margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                color: Colors.white.withOpacity(0.8), // Semi-transparent card
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                child: ListTile(
+                  title: Text(volunteer.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('Skills: ${volunteer.skills.join(', ')}'),
+                  trailing: Icon(
+                    volunteer.availability ? Icons.check_circle : Icons.cancel,
+                    color: volunteer.availability ? Colors.green.shade600 : Colors.red.shade600,
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
+  // --- END UPDATED HELPER WIDGET ---
 }

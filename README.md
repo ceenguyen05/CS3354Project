@@ -73,55 +73,7 @@ A full-stack web application designed to facilitate disaster response efforts th
 
 ## Testing
 
-**Step 1: Create a Firebase Project**
-
-1. Go to the [Firebase Console](https://console.firebase.google.com/).
-2. Click **“Add project”** and follow the steps (you can skip Google Analytics if you prefer).
-3. Once created, your project dashboard will load. You’re now ready to generate a key.
-
-**Step 2: Generate a Service Account Private Key**
-
-1. In the Firebase Console, click the **gear icon** next to **Project Overview** and choose **Project settings**.
-2. Go to the **Service accounts** tab.
-3. Make sure **Python** is selected under  **Admin SDK configuration snippet** **.**
-4. Click the blue **“Generate new private key”** button.
-5. A **.json** key file will download to your system automatically.
-
-**Step 3: Rename and Move the Key File**
-
-1. Rename the downloaded **.json** file to:
-
-```
-serviceAccountKey.json
-```
-
-Move this file into `code_1/backend`
-
-**Step 4: Enabling Signin/Signup**
-
-1. Go to the Build tab and click Authentication
-2. Click on Email/Password for the sign-in provider and save your changes
-3. All user data will be in the Firebase console under the Authentication tab
-
-**Step 5: Running the Code**
-
-Now, run:
-
-```bash
-make run-all # starts both the backend and frontend (may take a while)
-```
-
-Uses `pytest` to validate:
-
-- Successful match queries
-- Data structure of responses
-- Handling of invalid IDs
-
-Run:
-
-```
-make test
-```
+- READ code_1/README1.txt for how to get started and run the application 
 
 ## Deployment
 

@@ -34,15 +34,21 @@ Key Features:
   - Sign Up / Sign In Screen 
 
 HOW TO RUN
+
+
 ## Testing
 
-**Step 1: Create a Firebase Project**
+**Step 1: Download Flutter Extension on VSCODE. Have the Flutter SDK in your downloads 
+
+**Step 2: Go to pubspec.yaml and save it (CMD + S) or run flutter pub get 
+
+**Step 3: Create a Firebase Project**
 
 1. Go to the [Firebase Console](https://console.firebase.google.com/).
 2. Click **“Add project”** and follow the steps (you can skip Google Analytics if you prefer).
 3. Once created, your project dashboard will load. You’re now ready to generate a key.
 
-**Step 2: Generate a Service Account Private Key**
+**Step 4: Generate a Service Account Private Key**
 
 1. In the Firebase Console, click the ⚙️ **gear icon** next to **Project Overview** and choose **Project settings**.
 2. Go to the **Service accounts** tab.
@@ -50,7 +56,7 @@ HOW TO RUN
 4. Click the blue **“Generate new private key”** button.
 5. A **.json** key file will download to your system automatically.
 
-**Step 3: Rename and Move the Key File**
+**Step 5: Rename and Move the Key File**
 
 1. Rename the downloaded **.json** file to:
 
@@ -60,7 +66,7 @@ serviceAccountKey.json
 
 Move this file into `code_1/backend`
 
-** Step 4: Rebuild Virtual Enviorment 
+** Step 6: Rebuild Virtual Enviorment 
 
 run these commands in terminal : 
 
@@ -71,7 +77,7 @@ pip install --upgrade pip
 pip install -r code_1/backend/requirements.txt 
 
 
-**Step 5: Running the Code**
+**Step 7: Running the Code**
 
 Now, run:
 
@@ -92,6 +98,7 @@ Run:
 ```
 make test
 ```
+**Step 8 : That is it, THANKS 
 
 DEPENDENCIES:
 -------------

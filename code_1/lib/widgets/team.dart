@@ -1,3 +1,7 @@
+// written by: Casey 
+// tested by: Casey 
+// debugged by: Casey 
+
 import 'package:flutter/material.dart';
 
 class TeamWidget extends StatelessWidget {
@@ -34,12 +38,12 @@ class TeamWidget extends StatelessWidget {
                 ),
                 SizedBox(height: 25),
                 ContactItem(
-                  label: 'Kevin',
+                  label: 'Kevin Pulikkottil',
                   value: 'Backend / AI / Planner',
                 ),
                 SizedBox(height: 25),
                 ContactItem(
-                  label: 'Andy',
+                  label: 'Andy Jih',
                   value: 'Frontend',
                 ),
               ],

@@ -1,3 +1,7 @@
+// written by: Casey  
+// tested by: Casey 
+// debugged by: Casey 
+
 # Test Cases – Resource Inventory 
 
 ## Test Case 1 – Load a proper json file for this deliverable 1 test case 

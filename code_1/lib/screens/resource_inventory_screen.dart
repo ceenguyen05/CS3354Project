@@ -1,12 +1,17 @@
+// written by: Casey & Andy & Kevin 
+// tested by: Casey & Andy & Kevin 
+// debugged by: Casey & Kevin 
+
 // UI to update resource inventory
 // Creates a basics screen and imports the model and service darts for this specific function
 // Displays the current resources in your area
 // Will be soon updated for deliverable 2 to display all resources, even resources with 0 in your area
 // Will be able to integrate with updating data after a donation has been made for deliverable 2
 
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import '../models/resource.dart';
-// ignore: library_prefixes
 import '../services/resource_service.dart';
 
 class ResourceInventoryScreen extends StatefulWidget {
@@ -14,11 +19,12 @@ class ResourceInventoryScreen extends StatefulWidget {
 
   @override
   // ignore: library_private_types_in_public_api
-  _ResourceInventoryScreenState createState() => _ResourceInventoryScreenState();
+  _ResourceInventoryScreenState createState() =>
+      _ResourceInventoryScreenState();
 }
 
 class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
-  late Future<List<Resource>> _resourcesFuture;
+  final ResourceService _resourceService = ResourceService();
   bool _showLowInventoryOnly = false;
   String? _sortOption;
   final TextEditingController _searchController = TextEditingController();
@@ -38,12 +44,6 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _resourcesFuture = ResourceService.fetchResources();
   }
 
   @override
@@ -77,13 +77,13 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
             elevation: 0,
           ),
         ),
-        body: FutureBuilder<List<Resource>>(
-          future: _resourcesFuture,
+        body: StreamBuilder<List<Resource>>(
+          stream: _resourceService.watchResources(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             } else if (snapshot.hasError) {
-              return const Center(child: Text('Error loading data.'));
+              return Center(child: Text('Error loading data: ${snapshot.error}'));
             } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return const Center(child: Text('No resources available.'));
             }
@@ -140,8 +140,7 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
                                 label,
                                 selected,
                                 () => setState(() {
-                                  _showLowInventoryOnly =
-                                      label == 'Low Only' ? !_showLowInventoryOnly : false;
+                                  _showLowInventoryOnly = label == 'Low Only';
                                 }),
                               );
                             }).toList(),
@@ -221,7 +220,6 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
                         ),
                         child: ListTile(
                           leading: CircleAvatar(
-                            // ignore: deprecated_member_use
                             backgroundColor: iconColor.withOpacity(0.1),
                             child: Icon(icon, color: iconColor),
                           ),
@@ -311,38 +309,23 @@ class _ResourceInventoryScreenState extends State<ResourceInventoryScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () async { // Make async
+              onPressed: () async {
                 if (name.isNotEmpty && location.isNotEmpty && quantity > 0) {
                   final newResource = Resource(
                     name: name,
                     quantity: quantity,
                     location: location,
+                    timestamp: DateTime.now(),
                   );
                   try {
-                    // Call the service to add the resource
-                    await ResourceService.addResource(newResource);
-
-                    // Close the dialog
-                    // ignore: use_build_context_synchronously
-                    Navigator.of(context).pop();
-
-                    // Refresh the list by refetching
-                    setState(() {
-                      _resourcesFuture = ResourceService.fetchResources();
-                    });
-
-                    // Show success message
-                    // ignore: use_build_context_synchronously
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Resource added successfully!')),
-                    );
-
+                    await _resourceService.addResource(newResource);
+                    if (mounted) Navigator.of(context).pop();
                   } catch (e) {
-                     // Show error message
-                     // ignore: use_build_context_synchronously
-                     ScaffoldMessenger.of(context).showSnackBar(
-                       SnackBar(content: Text('Failed to add resource: $e')),
-                     );
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to add resource: $e')),
+                      );
+                    }
                   }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(

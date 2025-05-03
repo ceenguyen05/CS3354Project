@@ -1,11 +1,19 @@
+// written by: Casey & Andy & Kevin 
+// tested by: Casey & Andy & Kevin 
+// debugged by: Casey & Kevin 
+
+
 // UI for donation screen
 // Creates a basics screen and imports the model and service darts for this specific function
 // Asks the user for its name, type of donation, and description of the donation
 
+// ignore_for_file: use_build_context_synchronously
+
 // donation_screen.dart
 import 'package:flutter/material.dart';
 import '../models/donation.dart';
-import '../services/donation_service.dart';
+import '../services/donation_service.dart'; // Use the service
+import 'package:url_launcher/url_launcher.dart';
 
 class DonationScreen extends StatefulWidget {
   const DonationScreen({super.key});
@@ -16,8 +24,8 @@ class DonationScreen extends StatefulWidget {
 
 class _DonationScreenState extends State<DonationScreen> {
   final _formKey = GlobalKey<FormState>();
-  List<Donation> _donations = [];
   final TextEditingController _detailController = TextEditingController();
+  final DonationService _donationService = DonationService(); // Instantiate service
 
   String _name = '';
   String _type = 'Money';
@@ -32,75 +40,13 @@ class _DonationScreenState extends State<DonationScreen> {
   @override
   void initState() {
     super.initState();
-    _loadDonations();
-    if (_type == 'Money') {
-      _detailController.text = '\$';
-    }
+    _detailController.text = '\$';
   }
 
   @override
   void dispose() {
     _detailController.dispose();
     super.dispose();
-  }
-
-  void _loadDonations() async {
-    try {
-      final donations = await DonationService.fetchDonations();
-      if (mounted) {
-        setState(() {
-          _donations = donations;
-        });
-      }
-    } catch (e) {
-      print('Error loading donations: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading previous donations: $e')),
-        );
-      }
-    }
-  }
-
-  void _submitDonation() async {
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      _detail = _detailController.text;
-
-      final newDonation = Donation(
-        name: _name,
-        type: _type,
-        detail: _detail,
-      );
-
-      try {
-        await DonationService.submitDonation(newDonation);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Thanks $_name for donating $_detail ($_type)')),
-          );
-        }
-
-        _loadDonations();
-
-        if (mounted) {
-          setState(() {
-            _formKey.currentState!.reset();
-            _type = 'Money';
-            _detailController.text = '\$';
-            _name = '';
-          });
-        }
-
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to submit donation: $e')),
-          );
-        }
-      }
-    }
   }
 
   void _handleTypeChange(String newType) {
@@ -174,39 +120,50 @@ class _DonationScreenState extends State<DonationScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          validator: (value) =>
-                              value == null || value.isEmpty
-                                  ? "Enter your name"
-                                  : null,
+                          validator:
+                              (value) =>
+                                  value == null || value.isEmpty
+                                      ? "Enter your name"
+                                      : null,
                           onSaved: (value) => _name = value!,
                         ),
                         const SizedBox(height: 16),
-                        const Text("Donation Type", style: TextStyle(fontSize: 16)),
+                        const Text(
+                          "Donation Type",
+                          style: TextStyle(fontSize: 16),
+                        ),
                         const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: ['Money', 'Resource'].map((type) {
-                            final isSelected = _type == type;
-                            return Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 6),
-                                child: ChoiceChip(
-                                  label: Center(child: Text(type)),
-                                  selected: isSelected,
-                                  onSelected: (_) => _handleTypeChange(type),
-                                  selectedColor: const Color(0xFFB2EBF2),
-                                  backgroundColor: Colors.grey.shade200,
-                                  labelStyle: TextStyle(
-                                    color: isSelected ? Colors.black : Colors.black,
-                                    fontWeight: FontWeight.bold,
+                          children:
+                              ['Money', 'Resource'].map((type) {
+                                final isSelected = _type == type;
+                                return Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ),
+                                    child: ChoiceChip(
+                                      label: Center(child: Text(type)),
+                                      selected: isSelected,
+                                      onSelected:
+                                          (_) => _handleTypeChange(type),
+                                      selectedColor: const Color(0xFFB2EBF2),
+                                      backgroundColor: Colors.grey.shade200,
+                                      labelStyle: TextStyle(
+                                        color:
+                                            isSelected
+                                                ? Colors.black
+                                                : Colors.black,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
+                                );
+                              }).toList(),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -224,8 +181,10 @@ class _DonationScreenState extends State<DonationScreen> {
                               return "Enter a description";
                             }
                             if (_type == 'Money') {
-                              final numPart =
-                                  value.replaceAll(RegExp(r'[^\d.]'), '');
+                              final numPart = value.replaceAll(
+                                RegExp(r'[^\d.]'),
+                                '',
+                              );
                               if (numPart.isEmpty) {
                                 return "Please enter a valid amount";
                               }
@@ -236,9 +195,59 @@ class _DonationScreenState extends State<DonationScreen> {
                         const SizedBox(height: 20),
                         Center(
                           child: ElevatedButton(
-                            onPressed: _submitDonation,
-                            // ignore: sort_child_properties_last
-                            child: const Text("Donate"),
+                            onPressed: () async { // Make async
+                              if (_formKey.currentState!.validate()) {
+                                _formKey.currentState!.save();
+                                _detail = _detailController.text;
+
+                                if (_type == 'Money') {
+                                  final stripeUrl = Uri.parse(
+                                    'https://buy.stripe.com/test_6oE6p01Rvedi8rmaEE',
+                                  );
+                                  try {
+                                     await launchUrl(
+                                       stripeUrl,
+                                       mode: LaunchMode.externalApplication,
+                                     );
+                                  } catch(e) {
+                                     if (mounted) {
+                                       ScaffoldMessenger.of(context).showSnackBar(
+                                       SnackBar(content: Text('Could not launch Stripe: $e')),
+                                     );
+                                     }
+                                  }
+                                } else {
+                                  final newDonation = Donation(
+                                    name: _name,
+                                    type: _type,
+                                    detail: _detail,
+                                    timestamp: DateTime.now(), // Add timestamp
+                                  );
+
+                                  try {
+                                    await _donationService.addDonation(newDonation);
+
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Thanks $_name for donating $_detail ($_type)',
+                                          ),
+                                        ),
+                                      );
+                                      _formKey.currentState!.reset();
+                                      _handleTypeChange('Money'); // Reset type and detail field
+                                    }
+                                  } catch (e) {
+                                     if (mounted) {
+                                       ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Failed to submit donation: $e')),
+                                      );
+                                    }
+                                  }
+                                }
+                              }
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green.shade600,
                               foregroundColor: Colors.white,
@@ -250,6 +259,7 @@ class _DonationScreenState extends State<DonationScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
+                            child: const Text("Donate"),
                           ),
                         ),
                       ],
@@ -259,48 +269,67 @@ class _DonationScreenState extends State<DonationScreen> {
               ),
               const SizedBox(height: 20),
               const Divider(),
-              Align(
+              const Align(
                 alignment: Alignment.centerLeft,
-                child: const Text(
+                child: Text(
                   "Previous Donations:",
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
               Expanded(
-                child: _donations.isEmpty
-                    ? const Center(child: Text("No donations yet."))
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(top: 10),
-                        itemCount: _donations.length,
-                        itemBuilder: (context, index) {
-                          final d = _donations[index];
-                          Icon icon;
-                          if (d.type == 'Money') {
-                            icon = const Icon(Icons.attach_money,
-                                color: Colors.green);
-                          } else {
-                            icon = const Icon(Icons.inventory,
-                                color: Colors.amber);
-                          }
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
-                            child: ListTile(
-                              leading: icon,
-                              title: Text(
-                                "${d.name} donated ${d.detail}",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Text(d.type),
-                            ),
-                          );
-                        },
-                      ),
+                child: StreamBuilder<List<Donation>>(
+                  stream: _donationService.watchDonations(), // Watch service stream
+                  builder: (context, snapshot) {
+                     if (snapshot.connectionState == ConnectionState.waiting) {
+                       return const Center(child: CircularProgressIndicator());
+                     }
+                     if (snapshot.hasError) {
+                       return Center(child: Text('Error loading donations: ${snapshot.error}'));
+                     }
+                     if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                       return const Center(child: Text("No donations yet."));
+                     }
+
+                     final donations = snapshot.data!; // Use data from stream
+
+                     return ListView.builder(
+                       padding: const EdgeInsets.only(top: 10),
+                       itemCount: donations.length,
+                       itemBuilder: (context, index) {
+                         final d = donations[index];
+                         Icon icon;
+                         if (d.type == 'Money') {
+                           icon = const Icon(
+                             Icons.attach_money,
+                             color: Colors.green,
+                           );
+                         } else {
+                           icon = const Icon(
+                             Icons.inventory,
+                             color: Colors.amber,
+                           );
+                         }
+                         return Card(
+                           margin: const EdgeInsets.symmetric(vertical: 6),
+                           shape: RoundedRectangleBorder(
+                             borderRadius: BorderRadius.circular(12),
+                           ),
+                           elevation: 2,
+                           child: ListTile(
+                             leading: icon,
+                             title: Text(
+                               "${d.name} donated ${d.detail}",
+                               style: const TextStyle(
+                                 fontWeight: FontWeight.bold,
+                               ),
+                             ),
+                             subtitle: Text(d.type),
+                           ),
+                         );
+                       },
+                     );
+                  }
+                ),
               ),
             ],
           ),
@@ -309,4 +338,3 @@ class _DonationScreenState extends State<DonationScreen> {
     );
   }
 }
-

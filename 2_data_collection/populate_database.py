@@ -1,28 +1,35 @@
+# written by: Kevin 
+# tested by: Kevin 
+# debugged by: Kevin 
+
 import os
 import sys
+import json
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials
+# Import the google cloud firestore client library
+from google.cloud import firestore
+# IMPORT Python's datetime
+from datetime import datetime, timezone # Import timezone as well
 
-# Firebase Admin SDK Setup
-# This section initializes the Firebase Admin SDK. It first checks for the 
-# GOOGLE_APPLICATION_CREDENTIALS environment variable. If not set, it looks
-# for the serviceAccountKey.json file in the same directory as this script.
+# --- Configuration ---
+CLEAR_COLLECTIONS_BEFORE_POPULATING = True # Set to False to append data instead of replacing
+
+# --- Firebase Admin SDK Setup (for credentials only) ---
 try:
-    # Get the directory of the current script
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    # Default key path relative to this script
-    default_key_path = os.path.join(script_dir, "serviceAccountKey.json")
-    # Use environment variable, if available; otherwise, use the default path.
+    backend_dir = os.path.abspath(os.path.join(script_dir, '../code_1/backend'))
+    default_key_path = os.path.join(backend_dir, "serviceAccountKey.json")
     cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", default_key_path)
-    
+
     if not os.path.exists(cred_path):
         raise FileNotFoundError(f"Service account key file not found at: {cred_path}. Set GOOGLE_APPLICATION_CREDENTIALS or place key file correctly.")
-    
-    # Initialize the Firebase Admin SDK only if not already initialized
+
+    # Initialize firebase_admin ONLY if not already done (needed for credential loading)
     if not firebase_admin._apps:
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
-        print("Firebase Admin SDK initialized successfully for population script.")
+        print("Firebase Admin SDK initialized successfully for population script (for credentials).")
     else:
         print("Firebase Admin SDK already initialized.")
 
@@ -33,149 +40,245 @@ except ValueError as val_error:
     print(f"Error initializing Firebase Admin SDK: {val_error}")
     sys.exit(1)
 except Exception as e:
-    print(f"An unexpected error occurred during Firebase initialization: {e}")
+    print(f"An unexpected error occurred during Firebase Admin SDK setup: {e}")
     sys.exit(1)
 
-# Get the Firestore client
+
+# --- Get Firestore Client and Collection References (using google-cloud-firestore) ---
 try:
-    db = firestore.client()
-    print("Firestore client obtained successfully.")
+    # Use the google-cloud-firestore client directly
+    db = firestore.Client() # Use the imported firestore module
+    print("Firestore client obtained successfully (using google.cloud.firestore).")
+
+    # Collection references
+    volunteers_ref = db.collection('volunteers')
+    requests_ref = db.collection('requests')
+    resources_ref = db.collection('resources')
+    donations_ref = db.collection('donations')
+    users_ref = db.collection('users')
+    alerts_ref = db.collection('alerts') # Make sure alerts_ref is defined
+
 except Exception as e:
-    print(f"Error obtaining Firestore client: {e}")
+    print(f"Error obtaining Firestore client or collection references: {e}")
     sys.exit(1)
 
-# Firestore Collection References
-volunteers_ref = db.collection('volunteers')
-requests_ref = db.collection('requests')
-
-# Helper Functions
-def clear_collection(collection_ref):
-    """
-    Deletes all documents in a Firestore collection. Use with caution!
-    """
-    docs = collection_ref.stream()
+# --- Helper Functions ---
+def clear_collection(coll_ref):
+    """Deletes all documents in a given collection."""
+    docs = coll_ref.stream()
     deleted_count = 0
     for doc in docs:
-        print(f"Deleting doc {doc.id} from {collection_ref.id}...")
         doc.reference.delete()
         deleted_count += 1
-    print(f"Deleted {deleted_count} documents from {collection_ref.id}.")
+    print(f"Deleted {deleted_count} documents from {coll_ref.id}.")
 
-def populate():
-    """
-    Populates Firestore with sample data for volunteers and aid requests.
-    
-    For Volunteers:
-        - name: Volunteer name
-        - skills: Volunteer skill (e.g., 'Medical', 'Food Logistics', etc.)
-        - location: Volunteer location (e.g., 'Houston, TX')
-        - availability: "available" or "unavailable"
-    
-    For Requests:
-        - type: Type of request (e.g., 'Medical', 'Food Logistics', etc.)
-        - location: Request location (e.g., 'Houston, TX')
-        - urgency: Urgency level ('low', 'medium', or 'high')
-    """
-    print("Attempting to populate Firestore...")
+def load_json_data(filename):
+    """Loads data from a JSON file located in code_1/assets/json_files/."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Correct path relative to this script to find code_1/assets/json_files
+    project_root = os.path.abspath(os.path.join(script_dir, '..'))
+    json_dir = os.path.join(project_root, 'code_1', 'assets', 'json_files')
+    filepath = os.path.join(json_dir, filename)
     try:
-        # Clear existing data (optional; use carefully)
+        with open(filepath, 'r', encoding='utf-8') as f: # Specify encoding
+            data = json.load(f)
+            if isinstance(data, list):
+                print(f"Successfully loaded {len(data)} items from {filename}.")
+                return data
+            else:
+                print(f"Warning: Expected a list in {filename}, but found {type(data)}. Returning empty list.")
+                return []
+    except FileNotFoundError:
+        print(f"Warning: JSON file not found at {filepath}. Returning empty list.")
+        return []
+    except json.JSONDecodeError as e:
+        print(f"Error reading or parsing {filepath}: {e}. Returning empty list.")
+        return []
+    except Exception as e:
+        print(f"An unexpected error occurred loading {filepath}: {e}. Returning empty list.")
+        return []
+
+# --- Main Population Logic ---
+def populate():
+    """Populates Firestore with sample data AND data from JSON files."""
+    print("Attempting to populate Firestore...")
+    all_collections = [volunteers_ref, requests_ref, resources_ref, donations_ref, users_ref, alerts_ref]
+
+    if CLEAR_COLLECTIONS_BEFORE_POPULATING:
         print("Clearing existing data...")
-        clear_collection(volunteers_ref)
-        clear_collection(requests_ref)
+        for coll_ref in all_collections:
+            clear_collection(coll_ref)
         print("Existing data cleared.")
+    else:
+        print("CLEAR_COLLECTIONS_BEFORE_POPULATING is False. Appending data.")
 
-        # Define sample volunteers with additional attribute 'availability'
-        volunteers_data = [
-            {'name': 'Alice', 'skills': 'Medical', 'location': 'Houston, TX', 'availability': 'available'},
-            {'name': 'Bob', 'skills': 'Food Logistics', 'location': 'Austin, TX', 'availability': 'available'},
-            {'name': 'Charlie', 'skills': 'Rescue', 'location': 'Dallas, TX', 'availability': 'available'},
-            {'name': 'Diana', 'skills': 'Shelter Management', 'location': 'San Antonio, TX', 'availability': 'available'},
-            {'name': 'Ethan', 'skills': 'Medical', 'location': 'Fort Worth, TX', 'availability': 'available'},
-            {'name': 'Fiona', 'skills': 'Transportation', 'location': 'Houston, TX', 'availability': 'available'},
-            {'name': 'George', 'skills': 'Communication', 'location': 'Dallas, TX', 'availability': 'available'},
-        ]
+    batch = db.batch()
+    total_added = 0
+    items_processed = 0 # Add counter for processed items
 
-        # Define sample requests with all required fields
-        requests_data = {
-            '101': {
-                'name': 'Urgent Medical Aid Needed',
-                'type': 'Medical',
-                'description': 'Requires immediate medical attention near downtown.',
-                'latitude': 29.7604,  # Example Houston Lat
-                'longitude': -95.3698, # Example Houston Lon
-                'location': 'Houston, TX', # Keep original location string if needed elsewhere
-                'urgency': 'high'
-            },
-            '102': {
-                'name': 'Food Distribution Point',
-                'type': 'Food Logistics',
-                'description': 'Setting up food distribution, need volunteers.',
-                'latitude': 30.2672,  # Example Austin Lat
-                'longitude': -97.7431, # Example Austin Lon
-                'location': 'Austin, TX',
-                'urgency': 'medium'
-            },
-            '103': {
-                'name': 'Search and Rescue Op',
-                'type': 'Rescue',
-                'description': 'Search operation underway in flooded area.',
-                'latitude': 32.7767,  # Example Dallas Lat
-                'longitude': -96.7970, # Example Dallas Lon
-                'location': 'Dallas, TX',
-                'urgency': 'high'
-            },
-            '104': {
-                'name': 'Shelter Support Required',
-                'type': 'Shelter Management',
-                'description': 'Need help managing temporary shelter.',
-                'latitude': 29.4241,  # Example San Antonio Lat
-                'longitude': -98.4936, # Example San Antonio Lon
-                'location': 'San Antonio, TX',
-                'urgency': 'medium'
-            },
-            '105': {
-                'name': 'Medical Supplies Request',
-                'type': 'Medical',
-                'description': 'Requesting specific medical supplies.',
-                'latitude': 32.7767,  # Example Dallas Lat
-                'longitude': -96.7970, # Example Dallas Lon
-                'location': 'Dallas, TX',
-                'urgency': 'high'
-            },
-            '106': {
-                'name': 'Transport for Evacuees',
-                'type': 'Transportation',
-                'description': 'Need drivers for evacuee transport.',
-                'latitude': 29.7604,  # Example Houston Lat
-                'longitude': -95.3698, # Example Houston Lon
-                'location': 'Houston, TX',
-                'urgency': 'low'
-            },
+    try:
+        # --- 1. Add Sample Data (Hardcoded) ---
+        # Use standard types for now
+        volunteers_data = {
+            # Store location as a map/dict instead of GeoPoint
+            'volunteer1': {'name': 'Alice', 'skills': ['medical', 'driving'], 'availability': True, 'location': {'latitude': 29.76, 'longitude': -95.36}},
+            'volunteer2': {'name': 'Bob', 'skills': ['logistics'], 'availability': False, 'location': {'latitude': 30.26, 'longitude': -97.74}}
         }
+        requests_data = {
+             # Use datetime.now(timezone.utc) for timestamp
+            '101': {'name': 'Urgent Medical Aid Needed', 'type': 'Medical', 'description': 'Requires immediate medical attention near downtown.', 'latitude': 29.7604, 'longitude': -95.3698, 'timestamp': datetime.now(timezone.utc)},
+            '102': {'name': 'Food Distribution Point', 'type': 'Food', 'description': 'Setting up food distribution, need volunteers.', 'latitude': 30.2672, 'longitude': -97.7431, 'timestamp': datetime.now(timezone.utc)},
+        }
+        # Add sample volunteers
+        for doc_id, data in volunteers_data.items():
+            doc_ref = volunteers_ref.document(doc_id)
+            batch.set(doc_ref, data)
+            total_added += 1
+        # Add sample requests
+        for doc_id, data in requests_data.items():
+            doc_ref = requests_ref.document(doc_id)
+            batch.set(doc_ref, data)
+            total_added += 1
+        print(f"Added {len(volunteers_data)} sample volunteers and {len(requests_data)} sample requests.")
 
-        # Use batch writes for efficient insertion
-        batch = db.batch()
+        # --- 2. Load and Add Data from JSON Files ---
+        print("\n--- Loading data from JSON files ---")
 
-        print(f"Adding {len(volunteers_data)} volunteers...")
-        for v_data in volunteers_data:
-            # Auto-generate an ID for each volunteer
-            doc_ref = volunteers_ref.document()
-            batch.set(doc_ref, v_data)
+        # Resources
+        json_resources = load_json_data("resources.json")
+        print(f"--- Processing resources.json ({len(json_resources)} items) ---")
+        for i, item in enumerate(json_resources):
+            items_processed += 1
+            print(f"  Resource item {i}: {item}")
+            doc_data = {
+                "name": item.get("name"),
+                "location": item.get("location"),
+                "quantity": item.get("quantity"),
+                "timestamp": datetime.now(timezone.utc) # Use datetime
+            }
+            if doc_data["name"] and doc_data["location"] and doc_data["quantity"] is not None:
+                print(f"    -> VALID: Adding {doc_data['name']}")
+                doc_ref = resources_ref.document()
+                batch.set(doc_ref, doc_data)
+                total_added += 1
+            else:
+                print(f"    -> INVALID: Skipping item {i} due to missing fields.")
 
-        print(f"Adding {len(requests_data)} requests...")
-        for req_id, r_data in requests_data.items():
-            # Use predefined IDs for requests to simplify testing
-            doc_ref = requests_ref.document(req_id)
-            batch.set(doc_ref, r_data)
+        # Requests
+        json_requests = load_json_data("current_requests.json")
+        print(f"--- Processing current_requests.json ({len(json_requests)} items) ---")
+        for i, item in enumerate(json_requests):
+            items_processed += 1
+            print(f"  Request item {i}: {item}")
+            doc_data = {
+                "name": item.get("name"),
+                "type": item.get("type"),
+                "description": item.get("description"),
+                "latitude": item.get("latitude"),
+                "longitude": item.get("longitude"),
+                "timestamp": datetime.now(timezone.utc) # Use datetime
+            }
+            if (doc_data["name"] and doc_data["type"] and doc_data["description"] and
+                doc_data["latitude"] is not None and doc_data["longitude"] is not None):
+                print(f"    -> VALID: Adding {doc_data['name']}")
+                doc_ref = requests_ref.document()
+                batch.set(doc_ref, doc_data)
+                total_added += 1
+            else:
+                print(f"    -> INVALID: Skipping item {i} due to missing fields.")
 
-        # Commit the batch to apply all writes
+        # Donations
+        json_donations = load_json_data("donations.json")
+        print(f"--- Processing donations.json ({len(json_donations)} items) ---")
+        for i, item in enumerate(json_donations):
+            items_processed += 1
+            print(f"  Donation item {i}: {item}")
+            doc_data = {
+                 "name": item.get("name"),
+                 "type": item.get("type"),
+                 "detail": item.get("detail"),
+                 "timestamp": datetime.now(timezone.utc) # Use datetime
+             }
+            if doc_data["name"] and doc_data["type"] and doc_data["detail"]:
+                print(f"    -> VALID: Adding {doc_data['name']}")
+                doc_ref = donations_ref.document()
+                batch.set(doc_ref, doc_data)
+                total_added += 1
+            else:
+                print(f"    -> INVALID: Skipping item {i} due to missing fields.")
+
+        # Alerts
+        # Use existing load_json_data function and correct filename
+        alerts_list = load_json_data('emergency_alerts.json')
+        if alerts_list: # Check if the list is not None and not empty
+            print(f"--- Processing emergency_alerts.json ({len(alerts_list)} items) ---") # Add count here
+            for i, item in enumerate(alerts_list): # Iterate with index
+                items_processed += 1 # Increment processed items
+                doc_id = item.get('id') # Use 'id' from JSON if available (though not present in your example)
+
+                # --- FIX FIELD MAPPING HERE ---
+                doc_data = {
+                    # Map 'alertDescription' from JSON to 'message' in Firestore
+                    "message": item.get('alertDescription', 'No description provided'),
+                    # Map 'alertTitle' from JSON to 'severity' in Firestore (or use a default)
+                    "severity": item.get('alertTitle', 'Unknown'),
+                    # Keep adding the timestamp during population
+                    "timestamp": datetime.now(timezone.utc)
+                    # Optionally add location if needed later:
+                    # "location": item.get('alertLocation')
+                }
+                # --- END FIX ---
+
+                # Basic validation example (now checks the mapped message)
+                if doc_data["message"] != 'No description provided':
+                    print(f"  Alert item {i}: {item}") # Print item being processed
+                    print(f"    -> VALID Alert: {doc_id or '(auto-id)'} - {doc_data['message'][:30]}...")
+                    if doc_id:
+                        doc_ref = alerts_ref.document(doc_id) # Use alerts_ref
+                    else:
+                        doc_ref = alerts_ref.document() # Use alerts_ref
+                    batch.set(doc_ref, doc_data)
+                    total_added += 1 # Increment total added
+                else:
+                    print(f"  Alert item {i}: {item}") # Print invalid item
+                    print(f"    -> INVALID Alert data (missing alertDescription): {item}")
+        else:
+            # Message updated for clarity
+            print("  Skipping alerts (file empty, not found, or invalid).")
+
+
+        # Users
+        json_users = load_json_data("users.json")
+        print(f"--- Processing users.json ({len(json_users)} items) ---")
+        for i, item in enumerate(json_users):
+            items_processed += 1
+            print(f"  User item {i}: {item}")
+            doc_data = {
+                 "email": item.get("email"),
+                 "name": item.get("name"),
+                 "userType": item.get("userType", "donor"), # Default to 'donor' if missing
+                 "createdAt": datetime.now(timezone.utc) # Use datetime
+             }
+            if doc_data["email"] and doc_data["name"]:
+                print(f"    -> VALID: Adding {doc_data['name']}")
+                # Use email as document ID for users if appropriate, otherwise auto-generate
+                # doc_ref = users_ref.document(doc_data["email"])
+                doc_ref = users_ref.document() # Using auto-generated ID for now
+                batch.set(doc_ref, doc_data)
+                total_added += 1
+            else:
+                print(f"    -> INVALID: Skipping item {i} due to missing fields.")
+
+        # --- 3. Commit Batch ---
+        print(f"\nProcessed {items_processed} items from JSON files.")
+        print(f"Committing batch of {total_added} total documents (including samples)...")
         batch.commit()
-        print("Firestore populated successfully using batch writes.")
+        print("Firestore populated successfully.")
 
     except Exception as e:
         print(f"Error during Firestore population: {e}")
-        # Note: Partial writes might occur if an error is raised
 
+# --- Main Execution ---
 if __name__ == "__main__":
     print("Running Firestore population script...")
     populate()
