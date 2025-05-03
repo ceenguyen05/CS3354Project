@@ -1,46 +1,36 @@
-// this file and model screen "models" how the data should be read from the user and stored as a json file in the local database 
-// takes the alert title, description and the date of the emergency alert 
-// returns an Aert Object with these 3 things 
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import for Timestamp
+// lib/models/alert.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Alert {
-  final String id; // Add id field
-  final String title;
+  final String id;
   final String message;
   final String severity;
-  final String? targetArea; // Make optional if not always present
-  final Timestamp createdAt; // Use Timestamp
+  final DateTime timestamp;
 
   Alert({
-    required this.id,
-    required this.title,
+    this.id = '',
     required this.message,
     required this.severity,
-    this.targetArea,
-    required this.createdAt,
+    required this.timestamp,
   });
 
-  factory Alert.fromJson(Map<String, dynamic> json) {
+  /// Existing JSON constructor left intact.
+  factory Alert.fromJson(Map<String, dynamic> json) => Alert(
+    message: json['message'],
+    severity: json['severity'],
+    timestamp: DateTime.now(),
+  );
+  Map<String, dynamic> toJson() => {'message': message, 'severity': severity};
+
+  /// Firestore ▶️ model
+  factory Alert.fromFirestore(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data();
     return Alert(
-      id: json['id'] as String, // Expect 'id' from backend
-      title: json['title'] as String,
-      message: json['message'] as String,
-      severity: json['severity'] as String,
-      targetArea: json['target_area'] as String?, // Match backend field name
-      // Handle potential Timestamp conversion if backend sends string
-      createdAt: json['createdAt'] is Timestamp
-          ? json['createdAt'] as Timestamp
-          : Timestamp.now(), // Or parse from string if backend sends string
+      id: doc.id,
+      message: d['message'] as String,
+      severity: d['severity'] as String,
+      timestamp: (d['timestamp'] as Timestamp).toDate(),
     );
   }
-
-   // Optional: toJson if you need to send Alert objects
-   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'message': message,
-        'severity': severity,
-        'target_area': targetArea,
-        'createdAt': createdAt,
-      };
 }

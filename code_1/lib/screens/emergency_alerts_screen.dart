@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import '../models/alert.dart';
 import '../services/emergency_alert_service.dart';
+import 'package:intl/intl.dart'; // Import for date formatting
 
 class EmergencyAlertsScreen extends StatefulWidget {
   const EmergencyAlertsScreen({super.key});
@@ -18,13 +19,7 @@ class EmergencyAlertsScreen extends StatefulWidget {
 }
 
 class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
-  late Future<List<Alert>> _alertsFuture; // Rename for clarity
-
-  @override
-  void initState() {
-    super.initState();
-    _alertsFuture = EmergencyAlertService.fetchEmergencyAlerts(); // Use renamed variable
-  }
+  final EmergencyAlertService _alertService = EmergencyAlertService(); // Instantiate service
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +28,7 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: BackButton(color: Colors.black),
+        leading: const BackButton(color: Colors.black),
         title: const Text(
           'Emergency Alerts',
           style: TextStyle(
@@ -56,13 +51,13 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
           ),
         ),
         child: SafeArea(
-          child: FutureBuilder<List<Alert>>(
-            future: _alertsFuture, // Use renamed variable
+          child: StreamBuilder<List<Alert>>(
+            stream: _alertService.watchAlerts(), // Use service stream
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               } else if (snapshot.hasError) {
-                return const Center(child: Text('Error loading data.'));
+                return Center(child: Text('Error loading alerts: ${snapshot.error}'));
               } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return const Center(child: Text('No emergency alerts available.'));
               }
@@ -78,27 +73,36 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
                   IconData icon;
                   Color iconColor;
 
-                  switch (alert.title.toLowerCase()) {
-                    case 'flood warning':
-                      icon = Icons.water_drop;
-                      iconColor = Colors.blueAccent;
-                      break;
-                    case 'earthquake warning':
-                      icon = Icons.waves;
-                      iconColor = Colors.brown;
-                      break;
-                    case 'wildfire alert':
-                      icon = Icons.local_fire_department;
+                  switch (alert.severity.toLowerCase()) {
+                    case 'high':
+                      icon = Icons.warning_amber_rounded;
                       iconColor = Colors.red;
                       break;
-                    case 'thunder watch':
-                    case 'hail watch':
-                      icon = Icons.bolt;
-                      iconColor = Colors.amber;
+                    case 'medium':
+                      icon = Icons.info_outline;
+                      iconColor = Colors.orange;
+                      break;
+                    case 'low':
+                      icon = Icons.notifications_none;
+                      iconColor = Colors.blueAccent;
                       break;
                     default:
-                      icon = Icons.warning_amber_rounded;
-                      iconColor = Colors.deepPurple;
+                      if (alert.message.toLowerCase().contains('flood')) {
+                        icon = Icons.water_drop;
+                        iconColor = Colors.blueAccent;
+                      } else if (alert.message.toLowerCase().contains('fire')) {
+                        icon = Icons.local_fire_department;
+                        iconColor = Colors.red;
+                      } else if (alert.message.toLowerCase().contains('earthquake')) {
+                        icon = Icons.waves;
+                        iconColor = Colors.brown;
+                      } else if (alert.message.toLowerCase().contains('thunder') || alert.message.toLowerCase().contains('hail')) {
+                        icon = Icons.bolt;
+                        iconColor = Colors.amber;
+                      } else {
+                        icon = Icons.campaign;
+                        iconColor = Colors.deepPurple;
+                      }
                   }
 
                   return Card(
@@ -113,7 +117,7 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
                         child: Icon(icon, color: iconColor),
                       ),
                       title: Text(
-                        alert.title,
+                        alert.message.split('\n').first,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
@@ -122,11 +126,10 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
                       subtitle: Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          "${alert.message}\nArea: ${alert.targetArea ?? 'N/A'} | Severity: ${alert.severity}\nTime: ${alert.createdAt.toDate().toString()}",
-                          style: TextStyle(color: Colors.grey[700], fontSize: 14, height: 1.4),
+                          "${alert.message}\n\nSeverity: ${alert.severity}\n📅 Date: ${DateFormat.yMd().add_jm().format(alert.timestamp.toLocal())}",
+                          style: const TextStyle(fontSize: 14, height: 1.4),
                         ),
                       ),
-                      onTap: () => _showAlertDetails(context, alert),
                     ),
                   );
                 },
@@ -134,36 +137,6 @@ class _EmergencyAlertsScreenState extends State<EmergencyAlertsScreen> {
             },
           ),
         ),
-      ),
-    );
-  }
-
-  void _showAlertDetails(BuildContext context, Alert alert) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(alert.title),
-        content: SingleChildScrollView(
-          child: ListBody(
-            children: <Widget>[
-              Text('Message: ${alert.message}'),
-              const SizedBox(height: 8),
-              Text('Target Area: ${alert.targetArea ?? 'N/A'}'),
-              const SizedBox(height: 8),
-              Text('Severity: ${alert.severity}'), // Display severity
-              const SizedBox(height: 8),
-              Text('Time: ${alert.createdAt.toDate().toString()}'), // Display formatted timestamp
-            ],
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('Close'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
       ),
     );
   }

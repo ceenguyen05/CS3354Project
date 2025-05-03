@@ -6,14 +6,17 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/request.dart';
-// Remove the unused import warning by using the service
-import '../services/request_posting_service.dart'; // Import the service
+import '../services/request_posting_service.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-// Import your ScalableMarker if it's defined elsewhere or keep its definition here
-// import '../widgets/scalable_marker.dart';
 
-// Keep ScalableMarker definition if it's here
+class RequestPostingScreen extends StatefulWidget {
+  const RequestPostingScreen({super.key});
+
+  @override
+  State<RequestPostingScreen> createState() => _RequestPostingScreenState();
+}
+
 class ScalableMarker extends StatefulWidget {
   final VoidCallback onTap;
   const ScalableMarker({super.key, required this.onTap});
@@ -43,103 +46,91 @@ class _ScalableMarkerState extends State<ScalableMarker> {
   }
 }
 
-class RequestPostingScreen extends StatefulWidget {
-  const RequestPostingScreen({super.key});
-
-  @override
-  State<RequestPostingScreen> createState() => _RequestPostingScreenState();
-}
-
 class _RequestPostingScreenState extends State<RequestPostingScreen> {
   final _formKey = GlobalKey<FormState>();
-  // Instantiate the service
-  final RequestPostingService _requestService = RequestPostingService();
-  final MapController _mapController = MapController();
-
-  // Form fields state (keep existing)
-  String _name = ''; // Used for 'Your Name' field in the original UI
   String _aidType = 'Medical';
   String _description = '';
+  String _name = '';
   Position? _location;
   bool _locationMissingError = false;
-  bool _isLoading = false; // Add loading state
-
-  // State for displaying requests on map
-  late Future<List<Request>> _requestsFuture; // Use FutureBuilder
+  final RequestPostingService _requestService = RequestPostingService();
 
   Future<void> _getLocation() async {
     final permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       await Geolocator.requestPermission();
     }
-    final position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _location = position;
-      _locationMissingError = false;
-    });
+    final updatedPermission = await Geolocator.checkPermission();
+    if (updatedPermission == LocationPermission.denied || updatedPermission == LocationPermission.deniedForever) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permission denied.')));
+      return;
+    }
+
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _location = position;
+        _locationMissingError = false;
+      });
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to get location: $e')));
+    }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadRequestsForMap(); // Load initial requests for the map
-    _getLocation(); // Attempt to get location on init
-  }
-
-  // Load requests to display on the map
-  void _loadRequestsForMap() {
-    setState(() {
-      // Call the service method
-      _requestsFuture = _requestService.fetchCurrentRequests();
-    });
-  }
-
-  // Submit request via service
-  Future<void> _submitRequest() async { // Make async
+  void _submitRequest() async {
     setState(() {
       _locationMissingError = _location == null;
     });
 
-    // Keep validation logic
-    if (!_formKey.currentState!.validate() || _location == null) {
-      return;
+    if (_formKey.currentState!.validate() && _location != null) {
+      _formKey.currentState!.save();
+
+      final request = Request(
+        name: _name,
+        type: _aidType,
+        description: _description,
+        latitude: _location!.latitude,
+        longitude: _location!.longitude,
+        timestamp: DateTime.now(),
+      );
+
+      try {
+        await _requestService.submitRequest(request);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Request submitted.')),
+          );
+        }
+
+        setState(() {
+          _formKey.currentState!.reset();
+          _location = null;
+          _aidType = 'Medical';
+          _description = '';
+          _name = '';
+          _locationMissingError = false;
+        });
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to submit request: $e')),
+          );
+        }
+      }
     }
+  }
 
-    _formKey.currentState!.save();
-    setState(() => _isLoading = true); // Show loading indicator
-
-    // Create Request object - Use _name for the 'name' field as per model/UI
-    final newRequest = Request(
-      name: _name, // Use the variable linked to 'Your Name' field
-      type: _aidType,
-      description: _description,
-      latitude: _location!.latitude,
-      longitude: _location!.longitude,
-    );
-
-    try {
-      // Call the service method
-      await _requestService.submitRequest(newRequest);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Request submitted successfully!')));
-
-      // Reset form and reload map markers
-      setState(() {
-        _formKey.currentState!.reset();
-        _location = null;
-        _aidType = 'Medical';
-        _description = '';
-        _name = ''; // Reset name field variable
-        _locationMissingError = false;
-        _loadRequestsForMap(); // Refresh map markers
-      });
-    } catch (e) {
-      print("Error submitting request: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit request: ${e.toString().replaceFirst("Exception: ","")}')));
-    } finally {
-      if (mounted) setState(() => _isLoading = false); // Hide loading indicator
+  Icon _getAidIcon(String type) {
+    switch (type) {
+      case 'Medical':
+        return const Icon(Icons.local_hospital, color: Colors.red);
+      case 'Food':
+        return const Icon(Icons.restaurant, color: Colors.orange);
+      case 'Shelter':
+        return const Icon(Icons.home, color: Colors.green);
+      default:
+        return const Icon(Icons.help_outline);
     }
   }
 
@@ -164,7 +155,6 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Keep existing Scaffold and background gradient
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -201,9 +191,9 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
             ],
           ),
         ),
-        child: Column( // Keep Column structure
+        child: Column(
           children: [
-            Card( // Form Card
+            Card(
               elevation: 3,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -214,9 +204,9 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      TextFormField( // Your Name field
-                        decoration: _inputDecoration('Your Name'), // Keep existing decoration
-                        onSaved: (value) => _name = value ?? '', // Save to _name variable
+                      TextFormField(
+                        decoration: _inputDecoration('Your Name'),
+                        onSaved: (value) => _name = value ?? '',
                         validator: (value) =>
                             (value == null || value.isEmpty)
                                 ? 'Please enter your name'
@@ -261,14 +251,13 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                         }).toList(),
                       ),
                       const SizedBox(height: 16),
-                      TextFormField( // Description field
-                        decoration: _inputDecoration('Description'), // Keep existing decoration
-                        onSaved: (value) => _description = value ?? '', // Save to _description
+                      TextFormField(
+                        decoration: _inputDecoration('Description'),
+                        onSaved: (value) => _description = value ?? '',
                         validator: (value) =>
                             (value == null || value.isEmpty)
                                 ? 'Please enter a description'
                                 : null,
-                        maxLines: 3,
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -306,14 +295,11 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                           ),
                         ),
                       const SizedBox(height: 16),
-                      // Show loading indicator or button
-                      _isLoading
-                          ? const CircularProgressIndicator()
-                          : ElevatedButton(
-                              onPressed: _submitRequest, // Call the updated method
-                              style: _buttonStyle(isWhite: true), // Keep existing style
-                              child: const Text('Submit Request'),
-                            ),
+                      ElevatedButton(
+                        onPressed: _submitRequest,
+                        style: _buttonStyle(isWhite: true),
+                        child: const Text('Submit Request'),
+                      ),
                     ],
                   ),
                 ),
@@ -321,7 +307,7 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
             ),
             const SizedBox(height: 20),
             const Divider(),
-            const Align( // "Current Requests" title
+            const Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 "\uD83D\uDCCB Current Requests for Help",
@@ -329,73 +315,44 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
               ),
             ),
             const SizedBox(height: 0),
-            Expanded( // Map or List View
-              // Wrap the existing ListView.builder with a FutureBuilder
-              child: FutureBuilder<List<Request>>(
-                future: _requestsFuture, // Use the future from the service
+            Expanded(
+              child: StreamBuilder<List<Request>>(
+                stream: _requestService.watchRequests(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    print("Error loading map markers: ${snapshot.error}");
+                  }
+                  if (snapshot.hasError) {
                     return Center(child: Text('Error loading requests: ${snapshot.error}'));
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text('No current requests found.'));
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Text('No current requests for help.'));
                   }
 
-                  // Use snapshot.data! which is the List<Request> from the backend
-                  final requestsToShow = snapshot.data!;
+                  final submittedRequests = snapshot.data!;
 
-                  // Keep the existing Map View logic, but use requestsToShow
-                  return FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: LatLng(31.9686, -99.9018), // Center of Texas approx.
-                      initialZoom: 5,
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.example.app', // Replace if needed
-                      ),
-                      MarkerLayer(
-                        // Map the requests from the future snapshot
-                        markers: requestsToShow.map((req) {
-                          return Marker(
-                            width: 40,
-                            height: 40,
-                            point: LatLng(req.latitude, req.longitude),
-                            child: ScalableMarker( // Keep using ScalableMarker
-                              onTap: () {
-                                // Keep existing showDialog logic
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: Text('${req.name} - ${req.type}'),
-                                    content: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(req.description),
-                                        const SizedBox(height: 8),
-                                        Text('📍 Lat: ${req.latitude.toStringAsFixed(4)}'),
-                                        Text('📍 Long: ${req.longitude.toStringAsFixed(4)}'),
-                                      ],
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(),
-                                        child: const Text("Close"),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
+                  return ListView.builder(
+                    itemCount: submittedRequests.length,
+                    itemBuilder: (context, index) {
+                      final request = submittedRequests[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 2,
+                        child: ListTile(
+                          leading: _getAidIcon(request.type),
+                          title: Text(
+                            '${request.name} - ${request.type}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            '${request.description}\nLat: ${request.latitude}, Long: ${request.longitude}',
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -409,34 +366,31 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
   void _showMapDialog() {
     showDialog(
       context: context,
-      builder: (context) => Dialog( // Changed builder context variable name
+      builder: (context) => Dialog(
         child: SizedBox(
           height: MediaQuery.of(context).size.height * 0.75,
           width: MediaQuery.of(context).size.width * 0.9,
-          // Use FutureBuilder inside the dialog to load requests
-          child: FutureBuilder<List<Request>>(
-            future: _requestsFuture, // Reuse the same future
+          child: StreamBuilder<List<Request>>(
+            stream: _requestService.watchRequests(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError) {
-                return Center(child: Text('Error loading map: ${snapshot.error}'));
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text('No requests to display.'));
               }
-
-              final requestsToShowInDialog = snapshot.data!;
+              if (snapshot.hasError || !snapshot.hasData) {
+                return const Center(child: Text('Could not load map data.'));
+              }
+              final mapRequests = snapshot.data!;
 
               return Stack(
                 children: [
                   FlutterMap(
                     options: MapOptions(
-                      initialCenter: requestsToShowInDialog.isNotEmpty
+                      initialCenter: mapRequests.isNotEmpty
                           ? LatLng(
-                              requestsToShowInDialog[0].latitude,
-                              requestsToShowInDialog[0].longitude,
+                              mapRequests[0].latitude,
+                              mapRequests[0].longitude,
                             )
-                          : LatLng(31.9686, -99.9018), // Default center
+                          : const LatLng(37.7749, -122.4194),
                       initialZoom: 5,
                     ),
                     children: [
@@ -446,32 +400,36 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                         userAgentPackageName: 'com.example.app',
                       ),
                       MarkerLayer(
-                        markers: requestsToShowInDialog.map((req) { // Use requestsToShowInDialog
+                        markers: mapRequests.map((req) {
                           return Marker(
                             width: 40,
                             height: 40,
                             point: LatLng(req.latitude, req.longitude),
                             child: ScalableMarker(
                               onTap: () {
-                                // Close the map dialog first before showing details
-                                // Navigator.of(context).pop(); // Optional: close map dialog
                                 showDialog(
-                                  context: context, // Use the builder context
-                                  builder: (_) => AlertDialog( // Use different context variable
-                                    title: Text('${req.name} - ${req.type}'),
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: Text(
+                                      '${req.name} - ${req.type}',
+                                    ),
                                     content: Column(
                                       mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(req.description),
                                         const SizedBox(height: 8),
-                                        Text('📍 Lat: ${req.latitude.toStringAsFixed(4)}'), // Use toStringAsFixed
-                                        Text('📍 Long: ${req.longitude.toStringAsFixed(4)}'), // Use toStringAsFixed
+                                        Text('📍 Lat: ${req.latitude}'),
+                                        Text(
+                                          '📍 Long: ${req.longitude}',
+                                        ),
                                       ],
                                     ),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.of(context).pop(), // Use the builder context to pop
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(),
                                         child: const Text("Close"),
                                       ),
                                     ],
@@ -483,16 +441,6 @@ class _RequestPostingScreenState extends State<RequestPostingScreen> {
                         }).toList(),
                       ),
                     ],
-                  ),
-                  // Add a close button to the map dialog
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: FloatingActionButton(
-                      mini: true,
-                      onPressed: () => Navigator.of(context).pop(), // Close the dialog
-                      child: const Icon(Icons.close),
-                    ),
                   ),
                 ],
               );

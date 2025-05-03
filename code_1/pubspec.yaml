@@ -32,11 +32,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/json_files/resources.json
-    - assets/json_files/emergency_alerts.json
-    - assets/json_files/donations.json
-    - assets/json_files/current_requests.json
-    - assets/json_files/users.json
     - assets/logo.png
   fonts:
     - family: ComicSans

@@ -1,16 +1,19 @@
 import os
 import sys
-import json # Import json module
+import json
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials
+# Import the google cloud firestore client library
+from google.cloud import firestore
+# IMPORT Python's datetime
+from datetime import datetime, timezone # Import timezone as well
 
 # --- Configuration ---
 CLEAR_COLLECTIONS_BEFORE_POPULATING = True # Set to False to append data instead of replacing
 
-# --- Firebase Admin SDK Setup ---
+# --- Firebase Admin SDK Setup (for credentials only) ---
 try:
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    # Go up one level to project root, then into code_1/backend for the key
     backend_dir = os.path.abspath(os.path.join(script_dir, '../code_1/backend'))
     default_key_path = os.path.join(backend_dir, "serviceAccountKey.json")
     cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", default_key_path)
@@ -18,10 +21,11 @@ try:
     if not os.path.exists(cred_path):
         raise FileNotFoundError(f"Service account key file not found at: {cred_path}. Set GOOGLE_APPLICATION_CREDENTIALS or place key file correctly.")
 
+    # Initialize firebase_admin ONLY if not already done (needed for credential loading)
     if not firebase_admin._apps:
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
-        print("Firebase Admin SDK initialized successfully for population script.")
+        print("Firebase Admin SDK initialized successfully for population script (for credentials).")
     else:
         print("Firebase Admin SDK already initialized.")
 
@@ -32,58 +36,62 @@ except ValueError as val_error:
     print(f"Error initializing Firebase Admin SDK: {val_error}")
     sys.exit(1)
 except Exception as e:
-    print(f"An unexpected error occurred during Firebase initialization: {e}")
+    print(f"An unexpected error occurred during Firebase Admin SDK setup: {e}")
     sys.exit(1)
 
-# --- Get Firestore Client and Collection References ---
+
+# --- Get Firestore Client and Collection References (using google-cloud-firestore) ---
 try:
-    db = firestore.client()
-    print("Firestore client obtained successfully.")
-    # Add references for all collections used
+    # Use the google-cloud-firestore client directly
+    db = firestore.Client() # Use the imported firestore module
+    print("Firestore client obtained successfully (using google.cloud.firestore).")
+
+    # Collection references
     volunteers_ref = db.collection('volunteers')
     requests_ref = db.collection('requests')
     resources_ref = db.collection('resources')
     donations_ref = db.collection('donations')
     users_ref = db.collection('users')
-    alerts_ref = db.collection('alerts')
+    alerts_ref = db.collection('alerts') # Make sure alerts_ref is defined
+
 except Exception as e:
     print(f"Error obtaining Firestore client or collection references: {e}")
     sys.exit(1)
 
 # --- Helper Functions ---
-def clear_collection(collection_ref):
-    """Deletes all documents in a Firestore collection."""
-    docs = collection_ref.stream()
+def clear_collection(coll_ref):
+    """Deletes all documents in a given collection."""
+    docs = coll_ref.stream()
     deleted_count = 0
-    batch = db.batch()
     for doc in docs:
-        batch.delete(doc.reference)
+        doc.reference.delete()
         deleted_count += 1
-        if deleted_count % 400 == 0: # Commit batch periodically for large collections
-             print(f"Deleting batch of 400 from {collection_ref.id}...")
-             batch.commit()
-             batch = db.batch()
-    if deleted_count % 400 != 0: # Commit remaining deletes
-         print(f"Deleting final batch from {collection_ref.id}...")
-         batch.commit()
-    print(f"Deleted {deleted_count} documents from {collection_ref.id}.")
+    print(f"Deleted {deleted_count} documents from {coll_ref.id}.")
 
 def load_json_data(filename):
-    """Loads data from a JSON file in code_1/assets/json_files/"""
-    # Path relative to this script's location (2_data_collection)
-    # Go up to project root, then down to code_1/assets/json_files
-    json_dir = os.path.abspath(os.path.join(script_dir, '../code_1/assets/json_files'))
-    file_path = os.path.join(json_dir, filename)
-    if not os.path.exists(file_path):
-        print(f"Warning: JSON file not found at {file_path}. Skipping.")
-        return []
+    """Loads data from a JSON file located in code_1/assets/json_files/."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Correct path relative to this script to find code_1/assets/json_files
+    project_root = os.path.abspath(os.path.join(script_dir, '..'))
+    json_dir = os.path.join(project_root, 'code_1', 'assets', 'json_files')
+    filepath = os.path.join(json_dir, filename)
     try:
-        with open(file_path, 'r') as f:
+        with open(filepath, 'r', encoding='utf-8') as f: # Specify encoding
             data = json.load(f)
-            print(f"Successfully loaded {len(data)} items from {filename}.")
-            return data if isinstance(data, list) else [] # Ensure it's a list
+            if isinstance(data, list):
+                print(f"Successfully loaded {len(data)} items from {filename}.")
+                return data
+            else:
+                print(f"Warning: Expected a list in {filename}, but found {type(data)}. Returning empty list.")
+                return []
+    except FileNotFoundError:
+        print(f"Warning: JSON file not found at {filepath}. Returning empty list.")
+        return []
+    except json.JSONDecodeError as e:
+        print(f"Error reading or parsing {filepath}: {e}. Returning empty list.")
+        return []
     except Exception as e:
-        print(f"Error reading or parsing {filename}: {e}. Skipping.")
+        print(f"An unexpected error occurred loading {filepath}: {e}. Returning empty list.")
         return []
 
 # --- Main Population Logic ---
@@ -102,152 +110,164 @@ def populate():
 
     batch = db.batch()
     total_added = 0
+    items_processed = 0 # Add counter for processed items
 
     try:
         # --- 1. Add Sample Data (Hardcoded) ---
-        print("Adding hardcoded sample data...")
-        # Sample volunteers
-        volunteers_data = [
-            {'name': 'Alice', 'skills': 'Medical', 'location': 'Houston, TX', 'availability': 'available'},
-            {'name': 'Bob', 'skills': 'Food Logistics', 'location': 'Austin, TX', 'availability': 'available'},
-            # ... (add other sample volunteers if needed)
-        ]
-        for v_data in volunteers_data:
-            doc_ref = volunteers_ref.document()
-            batch.set(doc_ref, v_data)
-            total_added += 1
-
-        # Sample requests (using predefined IDs)
-        requests_data = {
-            '101': {'name': 'Urgent Medical Aid Needed', 'type': 'Medical', 'description': 'Requires immediate medical attention near downtown.', 'latitude': 29.7604, 'longitude': -95.3698, 'location': 'Houston, TX', 'urgency': 'high', 'createdAt': firestore.SERVER_TIMESTAMP},
-            '102': {'name': 'Food Distribution Point', 'type': 'Food Logistics', 'description': 'Setting up food distribution, need volunteers.', 'latitude': 30.2672, 'longitude': -97.7431, 'location': 'Austin, TX', 'urgency': 'medium', 'createdAt': firestore.SERVER_TIMESTAMP},
-             # ... (add other sample requests if needed)
+        # Use standard types for now
+        volunteers_data = {
+            # Store location as a map/dict instead of GeoPoint
+            'volunteer1': {'name': 'Alice', 'skills': ['medical', 'driving'], 'availability': True, 'location': {'latitude': 29.76, 'longitude': -95.36}},
+            'volunteer2': {'name': 'Bob', 'skills': ['logistics'], 'availability': False, 'location': {'latitude': 30.26, 'longitude': -97.74}}
         }
-        for req_id, r_data in requests_data.items():
-             # Map 'name' from sample data to 'title' for internal consistency if needed by matching_ai
-             r_data['title'] = r_data.pop('name', None) # Use title internally
-             doc_ref = requests_ref.document(req_id)
-             batch.set(doc_ref, r_data)
-             total_added += 1
+        requests_data = {
+             # Use datetime.now(timezone.utc) for timestamp
+            '101': {'name': 'Urgent Medical Aid Needed', 'type': 'Medical', 'description': 'Requires immediate medical attention near downtown.', 'latitude': 29.7604, 'longitude': -95.3698, 'timestamp': datetime.now(timezone.utc)},
+            '102': {'name': 'Food Distribution Point', 'type': 'Food', 'description': 'Setting up food distribution, need volunteers.', 'latitude': 30.2672, 'longitude': -97.7431, 'timestamp': datetime.now(timezone.utc)},
+        }
+        # Add sample volunteers
+        for doc_id, data in volunteers_data.items():
+            doc_ref = volunteers_ref.document(doc_id)
+            batch.set(doc_ref, data)
+            total_added += 1
+        # Add sample requests
+        for doc_id, data in requests_data.items():
+            doc_ref = requests_ref.document(doc_id)
+            batch.set(doc_ref, data)
+            total_added += 1
         print(f"Added {len(volunteers_data)} sample volunteers and {len(requests_data)} sample requests.")
 
         # --- 2. Load and Add Data from JSON Files ---
-        print("\nLoading data from JSON files...")
+        print("\n--- Loading data from JSON files ---")
 
         # Resources
         json_resources = load_json_data("resources.json")
-        for item in json_resources:
-            # Map JSON fields (name, quantity, location) to backend fields (name, quantity, description, category)
+        print(f"--- Processing resources.json ({len(json_resources)} items) ---")
+        for i, item in enumerate(json_resources):
+            items_processed += 1
+            print(f"  Resource item {i}: {item}")
             doc_data = {
                 "name": item.get("name"),
+                "location": item.get("location"),
                 "quantity": item.get("quantity"),
-                "description": item.get("description"), # Add if exists in JSON
-                "category": item.get("category"),     # Add if exists in JSON
-                # "location": item.get("location"), # Backend doesn't store location for resources currently
-                "createdAt": firestore.SERVER_TIMESTAMP
+                "timestamp": datetime.now(timezone.utc) # Use datetime
             }
-            if doc_data["name"] and doc_data["quantity"] is not None:
+            if doc_data["name"] and doc_data["location"] and doc_data["quantity"] is not None:
+                print(f"    -> VALID: Adding {doc_data['name']}")
                 doc_ref = resources_ref.document()
                 batch.set(doc_ref, doc_data)
                 total_added += 1
+            else:
+                print(f"    -> INVALID: Skipping item {i} due to missing fields.")
 
-        # Requests (current_requests.json)
+        # Requests
         json_requests = load_json_data("current_requests.json")
-        for item in json_requests:
-            # Map JSON fields (name, type, description, latitude, longitude, etc.) to backend fields
+        print(f"--- Processing current_requests.json ({len(json_requests)} items) ---")
+        for i, item in enumerate(json_requests):
+            items_processed += 1
+            print(f"  Request item {i}: {item}")
             doc_data = {
-                "title": item.get("name"), # Map frontend 'name' to backend 'title'
+                "name": item.get("name"),
                 "type": item.get("type"),
                 "description": item.get("description"),
                 "latitude": item.get("latitude"),
                 "longitude": item.get("longitude"),
-                "location": item.get("location"),
-                "urgency": item.get("urgency", "medium"), # Default if missing
-                "required_skills": item.get("required_skills", []), # Default if missing
-                "contact_email": item.get("contact_email"), # Add if exists
-                "status": "open",
-                "createdAt": firestore.SERVER_TIMESTAMP
-                # "user_id": ??? # Cannot link to user without auth info
+                "timestamp": datetime.now(timezone.utc) # Use datetime
             }
-            if doc_data["title"] and doc_data["type"] and doc_data["description"]:
-                doc_ref = requests_ref.document() # Auto-generate ID
+            if (doc_data["name"] and doc_data["type"] and doc_data["description"] and
+                doc_data["latitude"] is not None and doc_data["longitude"] is not None):
+                print(f"    -> VALID: Adding {doc_data['name']}")
+                doc_ref = requests_ref.document()
                 batch.set(doc_ref, doc_data)
                 total_added += 1
+            else:
+                print(f"    -> INVALID: Skipping item {i} due to missing fields.")
 
         # Donations
         json_donations = load_json_data("donations.json")
-        for item in json_donations:
-             # Map JSON fields (name, type, detail) to backend fields (itemDescription, quantity, etc.)
-             # This requires parsing the 'detail' field if it contains quantity/value
-             quantity = 1 # Default
-             estimated_value = None
-             detail_str = item.get('detail', '')
-             # Basic parsing attempt (same as in main.py)
-             if detail_str:
-                 parts = detail_str.lower().split(',')
-                 for part in parts:
-                     if 'qty:' in part:
-                         try: quantity = int(part.split(':')[-1].strip())
-                         except: pass
-                     if 'value:' in part or '$' in part:
-                         try: estimated_value = float(part.replace('value:','').replace('$','').strip())
-                         except: pass
-
-             doc_data = {
-                 "itemDescription": item.get("name"), # Map 'name' to 'itemDescription'
-                 "quantity": quantity,
-                 "estimatedValue": estimated_value,
-                 "donation_type": "non-monetary", # Assume non-monetary from JSON context
-                 # "donorInfo": ???
-                 # "donorUid": ???
-                 "createdAt": firestore.SERVER_TIMESTAMP
+        print(f"--- Processing donations.json ({len(json_donations)} items) ---")
+        for i, item in enumerate(json_donations):
+            items_processed += 1
+            print(f"  Donation item {i}: {item}")
+            doc_data = {
+                 "name": item.get("name"),
+                 "type": item.get("type"),
+                 "detail": item.get("detail"),
+                 "timestamp": datetime.now(timezone.utc) # Use datetime
              }
-             if doc_data["itemDescription"]:
-                 doc_ref = donations_ref.document()
-                 batch.set(doc_ref, doc_data)
-                 total_added += 1
+            if doc_data["name"] and doc_data["type"] and doc_data["detail"]:
+                print(f"    -> VALID: Adding {doc_data['name']}")
+                doc_ref = donations_ref.document()
+                batch.set(doc_ref, doc_data)
+                total_added += 1
+            else:
+                print(f"    -> INVALID: Skipping item {i} due to missing fields.")
 
         # Alerts
-        json_alerts = load_json_data("emergency_alerts.json")
-        for item in json_alerts:
-             # Map JSON fields (title, message, severity, etc.)
-             doc_data = {
-                 "title": item.get("title"),
-                 "message": item.get("message"),
-                 "severity": item.get("severity", "info"),
-                 "target_area": item.get("target_area"),
-                 "createdAt": firestore.SERVER_TIMESTAMP # Use server timestamp
-                 # "postedByUid": ???
-             }
-             if doc_data["title"] and doc_data["message"]:
-                 doc_ref = alerts_ref.document()
-                 batch.set(doc_ref, doc_data)
-                 total_added += 1
+        # Use existing load_json_data function and correct filename
+        alerts_list = load_json_data('emergency_alerts.json')
+        if alerts_list: # Check if the list is not None and not empty
+            print(f"--- Processing emergency_alerts.json ({len(alerts_list)} items) ---") # Add count here
+            for i, item in enumerate(alerts_list): # Iterate with index
+                items_processed += 1 # Increment processed items
+                doc_id = item.get('id') # Use 'id' from JSON if available (though not present in your example)
 
-        # Users (Optional - Be careful not to overwrite real user data if not clearing)
-        # Note: This JSON likely doesn't contain password hashes needed for Firebase Auth.
-        # This will only populate the Firestore 'users' collection, not Firebase Auth itself.
+                # --- FIX FIELD MAPPING HERE ---
+                doc_data = {
+                    # Map 'alertDescription' from JSON to 'message' in Firestore
+                    "message": item.get('alertDescription', 'No description provided'),
+                    # Map 'alertTitle' from JSON to 'severity' in Firestore (or use a default)
+                    "severity": item.get('alertTitle', 'Unknown'),
+                    # Keep adding the timestamp during population
+                    "timestamp": datetime.now(timezone.utc)
+                    # Optionally add location if needed later:
+                    # "location": item.get('alertLocation')
+                }
+                # --- END FIX ---
+
+                # Basic validation example (now checks the mapped message)
+                if doc_data["message"] != 'No description provided':
+                    print(f"  Alert item {i}: {item}") # Print item being processed
+                    print(f"    -> VALID Alert: {doc_id or '(auto-id)'} - {doc_data['message'][:30]}...")
+                    if doc_id:
+                        doc_ref = alerts_ref.document(doc_id) # Use alerts_ref
+                    else:
+                        doc_ref = alerts_ref.document() # Use alerts_ref
+                    batch.set(doc_ref, doc_data)
+                    total_added += 1 # Increment total added
+                else:
+                    print(f"  Alert item {i}: {item}") # Print invalid item
+                    print(f"    -> INVALID Alert data (missing alertDescription): {item}")
+        else:
+            # Message updated for clarity
+            print("  Skipping alerts (file empty, not found, or invalid).")
+
+
+        # Users
         json_users = load_json_data("users.json")
-        for item in json_users:
-             # Map JSON fields (email, name, userType, etc.)
-             doc_data = {
+        print(f"--- Processing users.json ({len(json_users)} items) ---")
+        for i, item in enumerate(json_users):
+            items_processed += 1
+            print(f"  User item {i}: {item}")
+            doc_data = {
                  "email": item.get("email"),
                  "name": item.get("name"),
-                 "userType": item.get("userType", "donor"),
-                 "createdAt": firestore.SERVER_TIMESTAMP
-                 # "uid": ??? # Cannot determine UID without Firebase Auth interaction
+                 "userType": item.get("userType", "donor"), # Default to 'donor' if missing
+                 "createdAt": datetime.now(timezone.utc) # Use datetime
              }
-             # Use email as document ID for simplicity IF clearing collection, otherwise might conflict
-             # A better approach would be to skip seeding users or use auto-generated IDs.
-             if doc_data["email"] and doc_data["name"]:
-                 # Using email as ID - ONLY SAFE IF CLEARING or emails are guaranteed unique
-                 # doc_ref = users_ref.document(doc_data["email"])
-                 doc_ref = users_ref.document() # Safer: Use auto-generated ID
-                 batch.set(doc_ref, doc_data)
-                 total_added += 1
+            if doc_data["email"] and doc_data["name"]:
+                print(f"    -> VALID: Adding {doc_data['name']}")
+                # Use email as document ID for users if appropriate, otherwise auto-generate
+                # doc_ref = users_ref.document(doc_data["email"])
+                doc_ref = users_ref.document() # Using auto-generated ID for now
+                batch.set(doc_ref, doc_data)
+                total_added += 1
+            else:
+                print(f"    -> INVALID: Skipping item {i} due to missing fields.")
 
         # --- 3. Commit Batch ---
-        print(f"\nCommitting batch of {total_added} total documents...")
+        print(f"\nProcessed {items_processed} items from JSON files.")
+        print(f"Committing batch of {total_added} total documents (including samples)...")
         batch.commit()
         print("Firestore populated successfully.")
 
