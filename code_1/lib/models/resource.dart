@@ -1,21 +1,53 @@
-// sets the model for the current resource inventory 
-// takes the three variables as defined in the Resource class 
-// for database and local data storage 
+// lib/models/resource.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Resource {
+  final String id;
   final String name;
-  final int quantity;
   final String location;
+  final int quantity;
+  final DateTime timestamp;
 
-  Resource({required this.name, required this.quantity, required this.location});
+  Resource({
+    this.id = '',
+    required this.name,
+    required this.location,
+    required this.quantity,
+    required this.timestamp,
+  });
 
-  // Factory method to create a Resource from JSON
-  factory Resource.fromJson(Map<String, dynamic> json) {
+  /// Existing JSON constructor left intact.
+  factory Resource.fromJson(Map<String, dynamic> json) => Resource(
+    name: json['name'],
+    location: json['location'],
+    quantity: json['quantity'] as int,
+    timestamp: DateTime.now(),
+  );
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'location': location,
+    'quantity': quantity,
+  };
+
+  /// Firestore ▶️ model
+  factory Resource.fromFirestore(
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
+    final d = doc.data();
     return Resource(
-      name: json['name'] as String,
-      quantity: json['quantity'] as int,
-      location: json['location'] as String,
+      id: doc.id,
+      name: d['name'] as String,
+      location: d['location'] as String,
+      quantity: d['quantity'] as int,
+      timestamp: (d['timestamp'] as Timestamp).toDate(),
     );
   }
+
+  Map<String, dynamic> toFirestore() => {
+    'name': name,
+    'location': location,
+    'quantity': quantity,
+    'timestamp': Timestamp.now(),
+  };
 }
-
-

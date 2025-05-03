@@ -1,81 +1,104 @@
 import 'package:flutter/material.dart';
-import '../screens/home_screen.dart';
-import '../screens/donation_screen.dart';
-import '../screens/emergency_alerts_screen.dart';
-import '../screens/profile_screen.dart'; // Correct import for AuthScreen
+import '../screens/profile_screen.dart';
 
-// Placeholder widget if screens don't exist yet
-class PlaceholderScreen extends StatelessWidget {
-  final String title;
-  const PlaceholderScreen({Key? key, required this.title}) : super(key: key);
+class CustomNavigationBar extends StatelessWidget {
+  const CustomNavigationBar({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Center(child: Text('$title Screen - Not Implemented'));
-  }
-}
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        children: [
+          // Row with expanded space between logo and button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Logo on the left
+              SizedBox(
+                height: 80,
+                width: 150,
+                child: Image.asset('assets/logo.png'),
+              ),
 
-class NavBar extends StatefulWidget {
-  const NavBar(); // Constructor without key
+              // Use Spacer to push the signup button to the right
+              Expanded(
+                child: Container(),
+              ),
 
-  @override
-  State<NavBar> createState() => _NavBarState(); // Use modern createState syntax
-}
-
-class _NavBarState extends State<NavBar> {
-  int _selectedIndex = 0;
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const Center(child: Text('Requests Placeholder')), // Simple Placeholder
-    const Center(child: Text('Resources Placeholder')), // Simple Placeholder
-    const Center(child: Text('Donate Placeholder')),    // Simple Placeholder
-    const Center(child: Text('Alerts Placeholder')),   // Simple Placeholder
-    const AuthScreen(), // Keep AuthScreen
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack( // Use IndexedStack to preserve state
-        index: _selectedIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex, // Ensure currentIndex is set
-        onTap: _onItemTapped,      // Ensure onTap is set
-        type: BottomNavigationBarType.fixed, // Ensure type allows more than 3 items to be visible
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.request_page), // Example icon
-            label: 'Requests',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inventory), // Example icon
-            label: 'Resources',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.volunteer_activism), // Example icon
-            label: 'Donate',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.warning),
-            label: 'Alerts',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.login), // Changed icon for Auth
-            label: 'Login/Sign Up', // Changed label
+              // Sign-up button
+              _HoverableSignInButton(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SignUpScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HoverableSignInButton extends StatefulWidget {
+  final VoidCallback onTap;
+  // ignore: unused_element_parameter
+  const _HoverableSignInButton({required this.onTap, super.key});
+
+  @override
+  State<_HoverableSignInButton> createState() => _HoverableSignInButtonState();
+}
+
+class _HoverableSignInButtonState extends State<_HoverableSignInButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final baseColor = Colors.white;
+    final hoverColor = Colors.white;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            color: _isHovered ? hoverColor : baseColor,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              if (_isHovered)
+                const BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+            ],
+            border: Border.all(color: Colors.black12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.person, color: Colors.black),
+              SizedBox(width: 8),
+              Text(
+                'Sign Up / Sign In',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

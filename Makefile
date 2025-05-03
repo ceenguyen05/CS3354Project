@@ -43,7 +43,8 @@ endif
 
 # Default target: run the FastAPI server with the service account environment variable set.
 run:
-	GOOGLE_APPLICATION_CREDENTIALS=code_1/backend/serviceAccountKey.json $(ACTIVATE) uvicorn code_1.backend.main:app --reload --port 8001
+	# Add --reload-dir here
+	GOOGLE_APPLICATION_CREDENTIALS=code_1/backend/serviceAccountKey.json $(ACTIVATE) uvicorn code_1.backend.main:app --reload --port 8001 --reload-dir code_1/backend
 
 # One-time setup: create the virtual environment & install dependencies
 setup:
@@ -82,6 +83,7 @@ run-all: setup populate-db
 	@sleep 1 # Give a moment for the port to release fully
 	@echo "Starting backend server..."
 	# Run the backend in the background so that the terminal is free for Flutter
+	# This now calls the modified 'run' target which uses --reload-dir
 	( $(MAKE) run & )
 	@echo "Waiting for backend to be ready..."
 	@while ! nc -z 127.0.0.1 8001; do sleep 1; done # Wait until port 8001 is listening

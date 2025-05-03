@@ -1,20 +1,20 @@
-// main dart just sends to the homescreen UI
-// sets the theme and calls the homescreen class
-// starting point is homescreen and everything after that will be in the home screen
-// This is what starts it all
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart'; // Import Firebase Core
-import 'firebase_options.dart'; // Import generated options
-// import 'app.dart'; // REMOVE THIS LINE - app.dart doesn't exist
+import 'firebase_options.dart'; // Import the generated Firebase options
 import 'screens/home_screen.dart'; // Import the HomeScreen
 
-void main() async { // Make main async
-  WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter bindings are initialized
-  await Firebase.initializeApp( // Initialize Firebase
+// Make main async
+Future<void> main() async {
+  // Ensure Flutter bindings are initialized
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase using the generated options
+  await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MyApp()); // Your main App widget defined below
+
+  // Run the app
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -26,16 +26,11 @@ class MyApp extends StatelessWidget {
       title: 'Disaster Relief Platform',
       theme: ThemeData(
         primarySwatch: Colors.indigo,
+        // Consider using a more standard font unless Comic Sans is required
         fontFamily: 'ComicSans',
+        visualDensity: VisualDensity.adaptivePlatformDensity, // Good practice
       ),
-      // Assuming HomeScreen is your initial screen
       home: const HomeScreen(),
-      // Define routes if you navigate by name
-      // routes: {
-      //   '/home': (context) => const HomeScreen(),
-      //   '/profile': (context) => const SignUpScreen(), // Example route
-      //   // Add other routes...
-      // },
     );
   }
 }

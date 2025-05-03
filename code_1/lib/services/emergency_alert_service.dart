@@ -1,18 +1,18 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
+// lib/services/emergency_alert_service.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/alert.dart';
 
 class EmergencyAlertService {
-  static Future<List<Alert>> fetchEmergencyAlerts() async {
-    try {
-      // Load the local JSON data using rootBundle
-      final String response = await rootBundle.loadString('assets/json_files/emergency_alerts.json');
-      final data = jsonDecode(response);
+  final _col = FirebaseFirestore.instance.collection('alerts');
 
-      // Convert the JSON data to a list of Alert objects
-      return (data as List).map((alert) => Alert.fromJson(alert)).toList();
-    } catch (e) {
-      rethrow;  // Re-throw the error after logging it
-    }
+  /// Real-time stream of all alerts, newest first.
+  Stream<List<Alert>> watchAlerts() {
+    return _col
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map(
+          (snap) => snap.docs.map((doc) => Alert.fromFirestore(doc)).toList(),
+        );
   }
 }
