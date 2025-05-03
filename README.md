@@ -86,6 +86,15 @@ A full-stack web application designed to facilitate disaster response efforts th
 - Firebase credentials are secured and excluded via `.gitignore`.
 - Placeholder user auth exists in frontend, backend integration pending.
 
+## Files and What They Do 
+Files and What They Are:
+- code_1 contains the entire website application, has front and backends and needed files to run it 
+- 2_data_collection contains a data collection program to populate our data base. It also has test cases of our features 
+- 3_basic_function_testing contains testing the AI matching aspect of our website 
+- 4_documentaion has all previous reports, final report, and the presentation powerpoint 
+- code_1/lib has all the frontend 
+- code_1/backend has all the backend 
+
 ## Team
 
 - Casey Nguyen
